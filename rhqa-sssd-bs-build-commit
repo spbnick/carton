@@ -1,0 +1,95 @@
+#!/bin/bash
+#
+# Build a local repo commit
+#
+# Copyright (c) 2013 Red Hat, Inc. All rights reserved.
+#
+# This copyrighted material is made available to anyone wishing
+# to use, modify, copy, or redistribute it subject to the terms
+# and conditions of the GNU General Public License version 2.
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public
+# License along with this program; if not, write to the Free
+# Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
+
+set -e -u -o pipefail -o noclobber
+
+# Build and publish a Git source tarball
+# Args: package_name work_dir yum_repo
+# Input: source tar archive
+function build_tarball()
+{
+    declare -r package_name="$1"; shift
+    declare -r work_dir="$1"; shift
+    declare -r yum_repo="$1"; shift
+
+    declare -r source_dir="$work_dir/source"
+    declare -r rpmbuild_dir="$work_dir/rpmbuild"
+
+    mkdir -p "$work_dir"
+    mkdir "$source_dir"
+
+    (
+        cd "$source_dir"
+
+        # Extract the commit
+        tar x
+
+        # Build source tarball
+        ./bootstrap
+        ./configure
+        make distcheck
+    )
+
+    # Build RPMs
+    mkdir "$rpmbuild_dir"/{,BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+    cp -a "$source_dir/$package_name.spec" "$rpmbuild_dir/SPECS/"
+    cp -a "$source_dir/$package_name"*.tar.gz "$rpmbuild_dir/SOURCES/"
+    rpmbuild --define "_topdir $rpmbuild_dir" \
+             -ba "$rpmbuild_dir/SPECS/$package_name.spec"
+
+    # Publish RPMs
+    mkdir -p "$yum_repo"
+    find "$rpmbuild_dir"/{RPMS,SRPMS} -name "*.rpm" | xargs cp -t "$yum_repo"
+    createrepo --update "$yum_repo"
+}
+
+#
+# Retrieve command-line arguments
+#
+declare package_name
+declare local_repo
+declare commit_hash
+declare commit_repo
+declare yum_repo
+
+if [ $# != 5 ]; then
+    echo "Invalid number of arguments" >&2
+    echo "Usage: `basename \"\$0\"`" \
+         "PACKAGE_NAME LOCAL_REPO COMMIT_HASH COMMIT_REPO YUM_REPO" >&2
+    exit 1
+fi
+
+package_name="$1"; shift
+local_repo=`readlink -f "$1"`; shift
+commit_hash="$1"; shift
+commit_repo=`readlink -f "$1"`; shift
+yum_repo=`readlink -f "$1"`; shift
+
+mkdir -p "$commit_repo"
+
+cd "$local_repo"
+# Normalize commit hash
+commit_hash=`git log -n1 --format=format:%H "$commit_hash"`
+
+git archive --format=tar "$commit_hash" |
+    build_tarball \
+        "$package_name" "$commit_repo/$commit_hash" "$yum_repo" \
+            > "$commit_repo/$commit_hash.log" 2>&1
+touch "$commit_repo/$commit_hash.done"
