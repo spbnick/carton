@@ -1,0 +1,93 @@
+#!/bin/bash
+#
+# Build commit RPM packages
+#
+# Copyright (c) 2013 Red Hat, Inc. All rights reserved.
+#
+# This copyrighted material is made available to anyone wishing
+# to use, modify, copy, or redistribute it subject to the terms
+# and conditions of the GNU General Public License version 2.
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public
+# License along with this program; if not, write to the Free
+# Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
+
+set -e -u -o pipefail -o noclobber
+
+# Build RPM packages from a Git commit tarball.
+# Args: commit_dir
+# Input: git commit tarball
+function build()
+{
+    declare commit_dir
+    commit_dir=`readlink -f "$1"`; shift
+    declare -r source_dir="$commit_dir/source"
+    declare -r rpmbuild_dir="$commit_dir/rpmbuild"
+
+    mkdir "$source_dir"
+    mkdir "$rpmbuild_dir"{,/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}}
+
+    (
+        cd "$source_dir"
+        set -x
+
+        # Extract the commit
+        tar x
+
+        # Build source tarball
+        ./bootstrap
+        ./configure
+        make distcheck
+
+        # Build RPMs
+        for tarball in *.tar.gz; do
+            ln -s "../../source/$tarball" "$rpmbuild_dir/SOURCES/"
+        done
+        for spec in *.spec; do
+            ln -s "../../source/$spec" "$rpmbuild_dir/SPECS/"
+            rpmbuild --define "_topdir $rpmbuild_dir" \
+                     -ba "$rpmbuild_dir/SPECS/$spec"
+        done
+    ) > "$commit_dir/build.log" 2>&1
+    touch "$commit_dir/build.stamp"
+}
+
+#
+# Retrieve command-line arguments
+#
+declare project_dir
+declare commit_hash
+
+if [ $# != 2 ]; then
+    echo "Invalid number of arguments" >&2
+    echo "Usage: `basename \"\$0\"` PROJECT_DIR COMMIT_HASH" >&2
+    exit 1
+fi
+
+project_dir=`readlink -f "$1"`; shift
+commit_hash="$1"; shift
+
+declare -r git_repo="$project_dir/git"
+declare -r commit_repo="$project_dir/commit"
+declare commit_hash
+declare commit_dir
+
+mkdir -p "$commit_repo"
+
+cd "$git_repo"
+# Normalize commit hash
+commit_hash=`git log -n1 --format=format:%h "$commit_hash"`
+commit_dir="$commit_repo/$commit_hash"
+
+# Create commit directory
+# (locking point, will exit if commit dir already exists)
+mkdir "$commit_dir"
+
+git archive --format=tar "$commit_hash" | build "$commit_dir"
+
