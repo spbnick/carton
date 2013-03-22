@@ -58,6 +58,7 @@ fi
 #
 declare commit
 for commit in $commit_list; do
+    git update-ref refs/heads/last_build "$commit"
     set +e
     (
         set -e
@@ -71,5 +72,4 @@ for commit in $commit_list; do
         echo "failed." >&2
     fi
     set -e
-    git update-ref refs/heads/last_build "$commit"
 done
