@@ -37,8 +37,9 @@ function build()
         cd "$source_dir"
         set -x
 
-        # Extract the commit
-        tar x
+        # Extract the commit, ignoring stored modification time to prevent
+        # future timestamps and subsequent build delays
+        tar --extract --touch
 
         # Build source tarball
         ./bootstrap
