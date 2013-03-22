@@ -33,7 +33,7 @@ if [ $# != 2 ]; then
 fi
 
 project_dir=`readlink -f "$1"`; shift
-remote_repo=`readlink -f "$1"`; shift
+remote_repo="$1"; shift
 
 mkdir -p "$project_dir"
 declare -r local_repo="$project_dir/git"
