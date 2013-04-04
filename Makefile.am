@@ -16,6 +16,6 @@
 # Boston, MA 02110-1301, USA.
 
 dist_bin_SCRIPTS = \
-    rhqa-sssd-bs-build \
-    rhqa-sssd-bs-publish \
-    rhqa-sssd-bs-update
+    carton-build \
+    carton-publish \
+    carton-update

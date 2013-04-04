@@ -63,9 +63,9 @@ for commit in $commit_list; do
     (
         set -e
         echo -n "$commit: building..." >&2
-        rhqa-sssd-bs-build "$project_dir" "$commit"
+        carton-build "$project_dir" "$commit"
         echo -n "done, publishing..." >&2
-        rhqa-sssd-bs-publish "$project_dir" "$commit"
+        carton-publish "$project_dir" "$commit"
         echo "done." >&2
     )
     if [ $? != 0 ]; then

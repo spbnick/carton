@@ -16,8 +16,8 @@
 # Boston, MA 02110-1301, USA.
 
 AC_PREREQ(2.60)
-AC_INIT([rhqa-sssd-bs], [1])
+AC_INIT([carton], [1])
 AM_INIT_AUTOMAKE([1.10 -Wall foreign])
-AC_SUBST([PACKAGE_SUMMARY], ["Red Hat QA SSSD team build server"])
+AC_SUBST([PACKAGE_SUMMARY], ["Carton build server"])
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

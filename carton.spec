@@ -1,7 +1,7 @@
-Name:       rhqa-sssd-bs
+Name:       carton
 Version:    1
 Release:    1%{?build}%{?dist}
-Summary:    Red Hat QA SSSD team build server
+Summary:    Carton build server
 
 License:    GPLv2+
 BuildArch:  noarch
