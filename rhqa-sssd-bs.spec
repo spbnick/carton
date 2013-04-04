@@ -1,6 +1,6 @@
 Name:       rhqa-sssd-bs
 Version:    1
-Release:    1%{?dist}
+Release:    1%{?build}%{?dist}
 Summary:    Red Hat QA SSSD team build server
 
 License:    GPLv2+
