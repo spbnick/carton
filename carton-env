@@ -1,5 +1,9 @@
+#!/bin/bash
 #
-# Copyright (c) 2012-2013 Red Hat, Inc. All rights reserved.
+# Output a Bash script setting installation-dependent environment variables
+# for Carton build server
+#
+# Copyright (c) 2013 Red Hat, Inc. All rights reserved.
 #
 # This copyrighted material is made available to anyone wishing
 # to use, modify, copy, or redistribute it subject to the terms
@@ -15,19 +19,14 @@
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA 02110-1301, USA.
 
-dist_bin_SCRIPTS = \
-    carton-env \
-    carton-build \
-    carton-publish \
-    carton-update
+cat <<"EOF"
+if [ -z "${_CARTON_ENV_SH+set}" ]; then
+declare _CARTON_ENV_SH=
 
-CARTON_LIB_DIR = $(pkgdatadir)
-CARTON_DATA_DIR = $(localstatedir)/lib/carton
+declare CARTON_LIB_DIR=`readlink -f \`dirname $0\`` # Replaced on installation
+declare CARTON_DATA_DIR="."                         # Replaced on installation
 
-install-data-hook:
-	$(MKDIR_P) "$(DESTDIR)$(CARTON_DATA_DIR)"
+PATH="$CARTON_LIB_DIR:$PATH"
 
-install-exec-hook:
-	$(SED) -e 's#\(CARTON_LIB_DIR=\).*#\1"$(CARTON_LIB_DIR)"#' \
-           -e 's#\(CARTON_DATA_DIR=\).*#\1"$(CARTON_DATA_DIR)"#' \
-           -i "$(DESTDIR)$(bindir)/carton-env"
+fi #_CARTON_ENV_SH
+EOF
