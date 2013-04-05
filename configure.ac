@@ -18,6 +18,5 @@
 AC_PREREQ(2.60)
 AC_INIT([carton], [1])
 AM_INIT_AUTOMAKE([1.10 -Wall foreign])
-AC_SUBST([PACKAGE_SUMMARY], ["Carton build server"])
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
