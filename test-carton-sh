@@ -1,0 +1,294 @@
+#!/bin/bash
+#
+# Carton build server function tests
+#
+# Copyright (c) 2013 Red Hat, Inc. All rights reserved.
+#
+# This copyrighted material is made available to anyone wishing
+# to use, modify, copy, or redistribute it subject to the terms
+# and conditions of the GNU General Public License version 2.
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public
+# License along with this program; if not, write to the Free
+# Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
+
+# Workaround vim subshell syntax highlighting issue
+{
+
+. ep.sh
+
+ep_suite_init "$@"
+
+ep_test_begin source; (
+    ep_test_init
+
+    CARTON_ENV=`carton-env`
+    eval "$CARTON_ENV"
+    . carton.sh
+); ep_test_end
+
+declare -r DATA_DIR=`mktemp --tmpdir --directory test-carton-sh.XXXXXXXX`
+ep_teardown_push rm -Rf "$DATA_DIR"
+
+# Source carton.sh with CARTON_DATA_DIR set to a temporary directory
+CARTON_ENV=`carton-env`
+eval "$CARTON_ENV"
+CARTON_DATA_DIR="$DATA_DIR/carton"
+mkdir "$CARTON_DATA_DIR"
+. carton.sh
+mkdir "$CARTON_PROJECT_DIR"
+mkdir "$CARTON_REPO_DIR"
+
+#
+# Create git repo
+#
+declare -r git_dir="$DATA_DIR/git"
+declare -a git_hash=()
+git init --quiet "$git_dir"
+cd "$git_dir"
+
+# Add pre-build-support, pre-v1 history
+for f in a b c; do
+    echo "$f" > "$f"
+    git add *
+    git commit --quiet --message "Add $f"
+    git tag "add_$f"
+    git_hash[${#git_hash[@]}]=`git log -n1 --format=format:%h`
+done
+
+# Add build support
+cat <<<'
+    set -o errexit
+    aclocal
+    automake --add-missing --copy
+    autoconf
+' > bootstrap
+chmod a+x bootstrap
+cat <<<'
+    AC_PREREQ(2.60)
+    AC_INIT([carton_test], [1])
+    AM_INIT_AUTOMAKE([1.10 -Wall foreign])
+    AC_CONFIG_FILES([Makefile])
+    AC_OUTPUT
+' > configure.ac
+cat <<<'
+dist_pkgdata_DATA = a b c
+' > Makefile.am
+git add *
+git commit --quiet --message 'Add build support'
+git tag "add_build"
+
+# Add post-build-support, pre-v1 history
+for f in d e f; do
+    echo "$f" > "$f"
+    sed -e "/DATA/ s/$/ $f/" -i Makefile.am
+    git add * 
+    git commit --quiet --message "Add $f"
+    git tag "add_$f"
+    git_hash[${#git_hash[@]}]=`git log -n1 --format=format:%h`
+done
+
+# Tag v1
+git tag --annotate --message "Release v1" v1
+
+# Add post-v1, pre-ver-update history
+for f in g h i; do
+    echo "$f" > "$f"
+    sed -e "/DATA/ s/$/ $f/" -i Makefile.am
+    git add * 
+    git commit --quiet --message "Add $f"
+    git tag "add_$f"
+    git_hash[${#git_hash[@]}]=`git log -n1 --format=format:%h`
+done
+
+# Add version update
+sed -e "/\[carton_test\]/ s/\[1\]/[2]/" -i configure.ac
+git commit --quiet --all --message 'Increase version in configure.ac'
+
+# Add post-v1, post-ver-update history
+for f in j k l; do
+    echo "$f" > "$f"
+    sed -e "/DATA/ s/$/ $f/" -i Makefile.am
+    git add * 
+    git commit --quiet --message "Add $f"
+    git tag "add_$f"
+    git_hash[${#git_hash[@]}]=`git log -n1 --format=format:%h`
+done
+
+# Tag v2
+git tag --annotate --message "Release v2" v2
+
+# Extract first and last commit hashes
+declare -r git_hash_first=${git_hash[0]}
+declare -r git_hash_last=${git_hash[${#git_hash[@]}-1]}
+
+#
+# Run tests
+#
+ep_suite_begin project; (
+    ep_suite_init
+
+    ep_suite_begin exists; (
+        ep_suite_init
+        ep_test no -e1 carton_project_exists test
+        mkdir "$CARTON_PROJECT_DIR/test"
+        ep_teardown_push rm -Rf "$CARTON_PROJECT_DIR/test"
+        ep_test yes carton_project_exists test
+    ); ep_suite_end
+
+    ep_suite_begin make; (
+        ep_suite_init
+        ep_teardown_push rm -Rf "$CARTON_PROJECT_DIR/test"
+        ep_test do carton_project_make test "$git_dir"
+        ep_test done carton_project_exists test
+    ); ep_suite_end
+
+    ep_suite_begin rm; (
+        ep_suite_init
+        carton_project_make test "$git_dir"
+        ep_teardown_push rm -Rf "$CARTON_PROJECT_DIR/test"
+        ep_test do carton_project_rm test
+        ep_test done -e1 carton_project_exists test
+    ); ep_suite_end
+
+    ep_suite_begin get; (
+        ep_suite_init
+        carton_project_make test "$git_dir"
+        ep_teardown_push carton_project_rm test
+        ep_test_begin "do"; (
+            declare s
+            s=`carton_project_get project_ test`
+            eval "$s"
+            [ "$project_dir" == "$CARTON_PROJECT_DIR/test" ]
+            [ "$project_git_dir" == "$CARTON_PROJECT_DIR/test/git" ]
+            [ "$project_commit_dir" == "$CARTON_PROJECT_DIR/test/commit" ]
+        ); ep_test_end
+    ); ep_suite_end
+); ep_suite_end
+
+ep_suite_begin commit; (
+    ep_suite_init
+
+    carton_project_make test "$git_dir"
+    ep_teardown_push carton_project_rm test
+    declare s
+    s=`carton_project_get project_ test`
+    eval "$s"
+
+    ep_suite_begin exists; (
+        ep_suite_init
+        ep_test no -e1 carton_commit_exists project_ "$git_hash_first"
+        mkdir "$project_commit_dir/$git_hash_first"
+        ep_teardown_push rm -Rf "$project_commit_dir/$git_hash_first"
+        ep_test yes carton_commit_exists project_ "$git_hash_first"
+    ); ep_suite_end
+
+    ep_suite_begin make; (
+        ep_suite_init
+        ep_teardown_push rm -Rf "$project_commit_dir/$git_hash_first"
+        ep_test do carton_commit_make project_ "$git_hash_first"
+        ep_test done carton_commit_exists project_ "$git_hash_first"
+    ); ep_suite_end
+
+    ep_suite_begin rm; (
+        ep_suite_init
+        carton_commit_make project_ "$git_hash_first"
+        ep_teardown_push rm -Rf "$project_commit_dir/$git_hash_first"
+        ep_test do carton_commit_rm project_ "$git_hash_first"
+        ep_test done -e1 carton_commit_exists project_ "$git_hash_first"
+    ); ep_suite_end
+
+    ep_suite_begin get; (
+        ep_suite_init
+
+        ep_suite_begin no_tag; (
+            ep_suite_init
+            carton_commit_make project_ "$git_hash_first"
+            ep_teardown_push carton_commit_rm project_ "$git_hash_first"
+
+            ep_test_begin do; (
+                ep_test_init
+                declare s
+                s=`carton_commit_get commit_ project_ $git_hash_first`
+                eval "$s"
+            ); ep_test_end
+
+            ep_suite_begin done; (
+                ep_suite_init
+                declare s
+                s=`carton_commit_get commit_ project_ $git_hash_first`
+                eval "$s"
+                ep_test project_ [ "$commit_project_" == "project_" ]
+                ep_test hash [ "$commit_hash" == "$git_hash_first" ]
+                ep_test dir \
+                        [ "$commit_dir" == \
+                          "$project_commit_dir/$git_hash_first" ]
+                ep_test dist_dir \
+                        [ "$commit_dist_dir" == "$commit_dir/dist" ]
+                ep_test dist_log \
+                        [ "$commit_dist_log" == "$commit_dir/dist.log" ]
+                ep_test dist_stamp \
+                        [ "$commit_dist_stamp" == \
+                          "$commit_dir/dist.stamp" ]
+                ep_test rel_dir [ "$commit_rel_dir" == "$commit_dir/rel" ]
+                ep_test description [ "$commit_description" == "-" ]
+                ep_test tag_name [ "$commit_tag_name" == "" ]
+                ep_test tag_distance [ "$commit_tag_distance" == "" ]
+            ); ep_suite_end
+        ); ep_suite_end
+
+        ep_suite_begin tag; (
+            ep_suite_init
+            carton_commit_make project_ "v1"
+            ep_teardown_push carton_commit_rm project_ "v1"
+
+            ep_test_begin do; (
+                ep_test_init
+                declare s
+                s=`carton_commit_get commit_ project_ v1`
+                eval "$s"
+            ); ep_test_end
+
+            ep_suite_begin done; (
+                ep_suite_init
+                declare s
+                s=`carton_commit_get commit_ project_ v1`
+                eval "$s"
+                ep_test description [ "$commit_description" == "v1-0" ]
+                ep_test tag_name [ "$commit_tag_name" == "v1" ]
+                ep_test tag_distance [ "$commit_tag_distance" == "0" ]
+            ); ep_suite_end
+        ); ep_suite_end
+
+        ep_suite_begin after_tag; (
+            ep_suite_init
+            carton_commit_make project_ "add_g"
+            ep_teardown_push carton_commit_rm project_ "add_g"
+
+            ep_test_begin do; (
+                ep_test_init
+                declare s
+                s=`carton_commit_get commit_ project_ add_g`
+                eval "$s"
+            ); ep_test_end
+
+            ep_suite_begin done; (
+                ep_suite_init
+                declare s
+                s=`carton_commit_get commit_ project_ add_g`
+                eval "$s"
+                ep_test description [ "$commit_description" == "v1-1" ]
+                ep_test tag_name [ "$commit_tag_name" == "v1" ]
+                ep_test tag_distance [ "$commit_tag_distance" == "1" ]
+            ); ep_suite_end
+        ); ep_suite_end
+    ); ep_suite_end
+); ep_suite_end
+
+} # Workaround vim subshell syntax highlighting issue
