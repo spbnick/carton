@@ -19,57 +19,64 @@
 # Boston, MA 02110-1301, USA.
 
 set -e -u -o pipefail -o noclobber
+CARTON_ENV=`carton-env`
+eval "$CARTON_ENV"
 
 #
 # Retrieve command-line arguments
 #
-declare project_dir
-declare remote_repo
+declare project_name
 
-if [ $# != 2 ]; then
+if [ $# != 1 ]; then
     echo "Invalid number of arguments" >&2
-    echo "Usage: `basename \"\$0\"` PROJECT_DIR REMOTE_REPO" >&2
+    echo "Usage: `basename \"\$0\"` PROJECT" >&2
     exit 1
 fi
 
-project_dir=`readlink -f "$1"`; shift
-remote_repo="$1"; shift
+project_name="$1"; shift
 
-mkdir -p "$project_dir"
-declare -r local_repo="$project_dir/git"
-
-#
-# Fetch new commits
-#
-declare commit_list
-if ! [ -e "$local_repo" ]; then
-    git init --quiet --bare "$local_repo"
+if ! carton_project_name_is_valid "$project_name"; then
+    echo "Invalid project name: $project_name" >&2
+    exit 1
 fi
-cd "$local_repo"
-git fetch --quiet -- "$remote_repo"
-if git show-ref --quiet refs/heads/last_build; then
-    commit_list=`git log --format=format:%h last_build..FETCH_HEAD`
-else
-    commit_list=`git log --format=format:%h --reverse FETCH_HEAD`
+if ! carton_project_exists "$project_name"; then
+    echo "Project doesn't exist: $project_name" >&2
+    exit 1
 fi
 
-#
-# Publish new commits
-#
-declare commit
-for commit in $commit_list; do
-    git update-ref refs/heads/last_build "$commit"
-    set +e
-    (
-        set -e
-        echo -n "$commit: building..." >&2
-        carton-build "$project_dir" "$commit"
-        echo -n "done, publishing..." >&2
-        carton-publish "$project_dir" "$commit"
-        echo "done." >&2
-    )
-    if [ $? != 0 ]; then
-        echo "failed." >&2
-    fi
-    set -e
+declare -A project
+carton_project_get project "$project_name"
+
+cd "${project[git_dir]}"
+git fetch --quiet
+
+declare branch_ref
+declare -A commit
+#for branch_ref in `git for-each-ref --format='%(refname)' refs/heads/`; do
+for branch_ref in `carton_project_branch_list project`; do
+    carton_project_branch_get branch project "$branch_ref"
+    for commit_hash in `git log --format=format:%H
+                            "$branch_ref@{upstream}" "$branch_ref"`; do
+        if ! carton_project_commit_exists project "$commit_hash"; then
+            carton_project_commit_make commit project "$commit_hash"
+        else
+            carton_project_commit_get commit project "$commit_hash"
+        fi
+        "${commit[is_built]}" || continue
+
+        if ! carton_commit_rev_exists commit "${_commit[rev_num]}"; then
+            carton_commit_rev_make rev commit "${_commit[rev_num]}"
+            carton_rev_build rev
+        else
+            carton_commit_rev_get rev commit
+        fi
+
+        carton_rev_is_built rev || continue
+
+        while read -r -d, channel; do
+            if ! carton_channel_is_published "$channel" rev; then
+                carton_channel_publish "$channel" rev
+            fi
+        done <<<"${branch[channel_list]}"
+    done
 done

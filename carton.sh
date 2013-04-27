@@ -27,59 +27,6 @@ eval "$CARTON_ENV"
 . carton_rel.sh
 . carton_repo.sh
 
-# Build a release RPM package from distribution tarball
-# Args: project_name committish rel_num
-function carton_make_rpm()
-{
-    declare -r project_name="$1";   shift
-    carton_assert 'carton_fs_name_is_valid "$project_name"'
-    declare -r committish="$1";     shift
-    declare -r rel_num="$1";        shift
-
-    carton_get_project project_ "$project_name" |
-    (
-        eval "`cat`"
-        carton_get_commit commit_ project_ "$committish" |
-        (
-            eval "`cat`"
-            (
-                carton_get_dist dist_ commit_
-                carton_get_rel rel_ commit_ "$rel_num"
-            ) |
-            (
-                eval "`cat`"
-
-                carton_assert 'test -e "$commit_dist_stamp"'
-                carton_assert 'test -d "$rel_dir"'
-
-                mkdir "$rel_rpm_dir"{,/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}}
-                (
-                    declare tarball
-                    declare spec
-
-                    echo -n "Start: "
-                    date --rfc-2822
-                    set -x
-
-                    for tarball in "$commit_dist_dir/"*.tar.gz; do
-                        ln -s "$tarball" "$rel_rpm_dir/SOURCES/"
-                    done
-                    for spec in "$commit_dist_dir/"*.spec; do
-                        ln -s "$spec" "$rel_rpm_dir/SPECS/"
-                        rpmbuild "${rel_rpm_opts[@]}" \
-                                 -ba "$rel_rpm_dir/SPECS/$spec"
-                    done
-
-                    set +x
-                    echo -n "End: "
-                    date --rfc-2822
-                ) >> "$commit_rpm_log" 2>&1
-                touch "$commit_rpm_stamp"
-            )
-        )
-    )
-}
-
 # Publish a release RPM package to a repository
 # Args: project_name committish rel_num repo_name
 function carton_publish_rpm()

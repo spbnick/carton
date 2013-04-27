@@ -20,110 +20,140 @@
 if [ -z "${_CARTON_COMMIT_SH+set}" ]; then
 declare _CARTON_COMMIT_SH=
 
-CARTON_ENV=`carton-env`
-eval "$CARTON_ENV"
-
 . carton_util.sh
 . carton_project.sh
 
-# Convert a commit committish reference to normalized hash.
-# Args: project_ committish
-# Output: commit hash
-function carton_commit_tish_to_hash()
-{
-    declare -r project_="$1";   shift
-    carton_assert 'carton_var_name_is_valid "$project_"'
-    declare -r committish="$1"; shift
-    declare -r _project_git_dir="${project_}git_dir"
+declare -r _CARTON_COMMIT_GET_LOC='
+    declare -r _project_var="$1";   shift
+    carton_assert "carton_var_name_is_valid \"\$_project_var\""
+    declare -r _committish="$1";    shift
 
-    (
-        cd "${!_project_git_dir}"
-        git log -n1 --format=format:%h "$committish"
+    declare -A _project
+    carton_aa_copy _project "$_project_var"
+
+    declare -A _commit=()
+
+    _commit[hash]=`
+        cd "${_project[git_dir]}" &&
+        git log -n1 --format=format:%h "$_committish"`
+    _commit[dir]="${_project[commit_dir]}/${_commit[hash]}"
+'
+
+declare -r _CARTON_COMMIT_GET_STRUCT='
+    carton_assert "[ -d \"\${_commit[dir]}\" ]"
+    _commit+=(
+        [dist_dir]="${_commit[dir]}/dist"
+        [dist_stamp]="${_commit[dir]}/dist.stamp"
+        [dist_log]="${_commit[dir]}/dist.log"
+        [rev_dir]="${_commit[dir]}/rev"
     )
-}
+'
+
+declare -r _CARTON_COMMIT_GET_PROPS='
+    carton_assert "[ -d \"\${_commit[dir]}\" ]"
+
+    _commit[desc]=`git describe --long \
+                                --match="${_project[tag_glob]}" \
+                                "${_commit[hash]}" | cut -d- -f1-2 ||
+                    { [ $? == 128 ] && echo "-"; } ||
+                        false`
+    _commit[tag_name]="${_commit[description]%-*}"
+    _commit[tag_distance]="${_commit[description]#*-}"
+
+    if [ -e "${_commit[dist_stamp]}" ]; then
+        _commit[is_built]="true"
+
+        _commit[dist_ver]=`"${_commit[dist_dir]}/configure" --version |
+                            sed "1 {s/.*[[:blank:]]//;q}"`
+        _commit[dist_tag_name]=`printf "${_project[tag_format]}" \
+                                    "${_commit[dist_ver]}"`
+        if [ "${_commit[dist_tag_name]}" == "${_commit[tag_name]}" ]; then
+            _commit[rev_num]="${_commit[tag_distance]}"
+        else
+            _commit[rev_num]="-${_commit[tag_distance]}"
+        fi
+    else
+        _commit[is_built]="false"
+    fi
+'
 
 # Check if a commit exists.
-# Args: project_ committish
+# Args: _project_var _committish
 function carton_commit_exists()
 {
-    declare -r project_="$1";   shift
-    carton_assert 'carton_var_name_is_valid "$project_"'
-    declare -r committish="$1"; shift
-    declare hash
-    hash=`carton_commit_tish_to_hash "$project_" "$committish"`
-    declare -r _project_commit_dir="${project_}commit_dir"
-
-    [ -d "${!_project_commit_dir}/$hash" ]
+    eval "$_CARTON_COMMIT_GET_LOC"
+    [ -d "${_commit[dir]}" ]
 }
 
-# Create a commit directory.
-# Args: project_ committish
+# Create a commit.
+# Args: _commit_var _project_var _committish
 function carton_commit_make()
 {
-    declare -r project_="$1";   shift
-    carton_assert 'carton_var_name_is_valid "$project_"'
-    declare -r committish="$1"; shift
-    declare hash
-    hash=`carton_commit_tish_to_hash "$project_" "$committish"`
-    declare -r _project_commit_dir="${project_}commit_dir"
+    declare -r _commit_var="$1";    shift
+    carton_assert 'carton_var_name_is_valid "$_commit_var"'
+    eval "$_CARTON_COMMIT_GET_LOC"
+    carton_assert '! carton_commit_exists "$_project_var" "$_committish"'
 
-    mkdir "${!_project_commit_dir}/$hash/"{,dist,rel}
+    mkdir "${_commit[dir]}"
+
+    eval "$_CARTON_COMMIT_GET_STRUCT"
+    mkdir "${_commit[dist_dir]}"
+    mkdir "${_commit[rev_dir]}"
+
+    # Extract the commit, ignoring stored modification time to prevent
+    # future timestamps and subsequent build delays
+    (
+        cd "${_project[git_dir]}"
+        git archive --format=tar "${_commit[hash]}"
+    ) | tar --extract --touch --verbose --directory "${_commit[dist_dir]}"
+
+    # Build the distribution
+    (
+        set -e
+        cd "${_commit[dist_dir]}"
+
+        echo -n "Start: "
+        date --rfc-2822
+        (
+            set -x
+
+            # Check that there are no tarballs in the source
+            ! test -e *.tar.gz
+
+            # Build source tarball
+            ./bootstrap
+            ./configure
+            make distcheck
+        )
+        echo -n "End: "
+        date --rfc-2822
+    ) > "${_commit[dist_log]}" 2>&1 &&
+        touch "${_commit[dist_stamp]}"
+
+    eval "$_CARTON_COMMIT_GET_PROPS"
+
+    carton_aa_copy "$_commit_var" _commit
 }
 
 # Remove a commit directory.
-# Args: project_ committish
+# Args: _project_var _committish
 function carton_commit_rm()
 {
-    declare -r project_="$1";   shift
-    carton_assert 'carton_var_name_is_valid "$project_"'
-    declare -r committish="$1"; shift
-    carton_assert "carton_commit_exists "$project_" "$committish""
-    declare hash
-    hash=`carton_commit_tish_to_hash "$project_" "$committish"`
-    declare -r _project_commit_dir="${project_}commit_dir"
-
-    rm -Rf "${!_project_commit_dir}/$hash"
+    eval "$_CARTON_COMMIT_GET_LOC"
+    carton_assert 'carton_commit_exists "$_project_var" "$_committish"'
+    rm -Rf "${_commit[dir]}"
 }
 
-# Generate a script assigning commit variables with specified prefix.
-# Args: commit_ project_ committish
+# Retrieve a commit.
+# Args: _commit_var _project_var _committish
 function carton_commit_get()
 {
-    declare -r commit_="$1";    shift
-    carton_assert 'carton_var_name_is_valid "$commit_"'
-    declare -r project_="$1";   shift
-    carton_assert 'carton_var_name_is_valid "$project_"'
-    declare -r committish="$1"; shift
-    carton_assert 'carton_commit_exists "$project_" "$committish"'
-
-    cat <<EOF
-        set -o errexit
-        declare -r ${commit_}project_="$project_"
-        declare ${commit_}hash
-        ${commit_}hash=\`carton_commit_tish_to_hash "$project_" "$committish"\`
-        declare -r ${commit_}hash
-
-        declare -r ${commit_}dir="\$${project_}commit_dir/\$${commit_}hash"
-        declare -r ${commit_}dist_dir="\$${commit_}dir/dist"
-        declare -r ${commit_}dist_log="\$${commit_}dir/dist.log"
-        declare -r ${commit_}dist_stamp="\$${commit_}dir/dist.stamp"
-        declare -r ${commit_}rel_dir="\$${commit_}dir/rel"
-
-        declare ${commit_}description
-        ${commit_}description=\`
-            cd "\$${project_}git_dir" &&
-                {
-                    git describe --long \\
-                                 --match="\$${project_}tag_glob" \\
-                                 "\$${commit_}hash" | cut -d- -f1-2 ||
-                        { [ \$? == 128 ] && echo "-"; } ||
-                            false
-                }\`
-        declare -r ${commit_}description
-
-        declare -r ${commit_}tag_name="\${${commit_}description%-*}"
-        declare -r ${commit_}tag_distance="\${${commit_}description#*-}"
-EOF
+    declare -r _commit_var="$1";    shift
+    carton_assert 'carton_var_name_is_valid "$_commit_var"'
+    eval "$_CARTON_COMMIT_GET_LOC
+          $_CARTON_COMMIT_GET_STRUCT
+          $_CARTON_COMMIT_GET_PROPS"
+    carton_aa_copy "$_commit_var" _commit
 }
 
 fi # _CARTON_COMMIT_SH

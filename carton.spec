@@ -1,6 +1,6 @@
 Name:       carton
 Version:    1
-Release:    1%{?build}%{?dist}
+Release:    1%{?rev}%{?dist}
 Summary:    Carton build server
 
 License:    GPLv2+
