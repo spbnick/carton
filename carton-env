@@ -24,7 +24,7 @@ if [ -z "${_CARTON_ENV_SH+set}" ]; then
 declare _CARTON_ENV_SH=
 
 declare CARTON_LIB_DIR=`readlink -f \`dirname $0\`` # Replaced on installation
-declare CARTON_DATA_DIR="."                         # Replaced on installation
+declare CARTON_DATA_DIR="${CARTON_DATA_DIR-.}"      # Replaced on installation
 
 PATH="$CARTON_LIB_DIR:$PATH"
 

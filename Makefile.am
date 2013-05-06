@@ -34,5 +34,5 @@ install-data-hook:
 
 install-exec-hook:
 	$(SED) -e 's#\(CARTON_LIB_DIR=\).*#\1"$(CARTON_LIB_DIR)"#' \
-           -e 's#\(CARTON_DATA_DIR=\).*#\1"$(CARTON_DATA_DIR)"#' \
+           -e 's#\(CARTON_DATA_DIR=\).*#\1"$${CARTON_DATA_DIR-$(CARTON_DATA_DIR)}"#' \
            -i "$(DESTDIR)$(bindir)/carton-env"
