@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Update local repo and build new commits
+# Fetch project repos and publish new commit revisions
 #
 # Copyright (c) 2013 Red Hat, Inc. All rights reserved.
 #
@@ -22,61 +22,34 @@ set -e -u -o pipefail -o noclobber
 CARTON_ENV=`carton-env`
 eval "$CARTON_ENV"
 
-#
-# Retrieve command-line arguments
-#
+if [ $# != 0 ] && [ $# != 1 ]; then
+    echo "Invalid number of arguments" >&2
+    echo "Usage: `basename \"\$0\"` [PROJECT]" >&2
+    exit 1
+fi
+
+declare project_name_list
 declare project_name
 
-if [ $# != 1 ]; then
-    echo "Invalid number of arguments" >&2
-    echo "Usage: `basename \"\$0\"` PROJECT" >&2
-    exit 1
+if (( $# > 0 )); then
+    project_name="$1"; shift
+
+    if ! carton_project_name_is_valid "$project_name"; then
+        echo "Invalid project name: $project_name" >&2
+        exit 1
+    fi
+    if ! carton_project_exists "$project_name"; then
+        echo "Project doesn't exist: $project_name" >&2
+        exit 1
+    fi
+    project_name_list="$project_name"
+else
+    project_name_list=`carton_project_list_list`
 fi
 
-project_name="$1"; shift
-
-if ! carton_project_name_is_valid "$project_name"; then
-    echo "Invalid project name: $project_name" >&2
-    exit 1
-fi
-if ! carton_project_exists "$project_name"; then
-    echo "Project doesn't exist: $project_name" >&2
-    exit 1
-fi
-
-declare -A project
-carton_project_get project "$project_name"
-
-cd "${project[git_dir]}"
-git fetch --quiet
-
-declare branch_ref
-declare -A commit
-#for branch_ref in `git for-each-ref --format='%(refname)' refs/heads/`; do
-for branch_ref in `carton_project_branch_list project`; do
-    carton_project_branch_get branch project "$branch_ref"
-    for commit_hash in `git log --format=format:%H
-                            "$branch_ref@{upstream}" "$branch_ref"`; do
-        if ! carton_project_commit_exists project "$commit_hash"; then
-            carton_project_commit_make commit project "$commit_hash"
-        else
-            carton_project_commit_get commit project "$commit_hash"
-        fi
-        "${commit[is_built]}" || continue
-
-        if ! carton_commit_rev_exists commit "${_commit[rev_num]}"; then
-            carton_commit_rev_make rev commit "${_commit[rev_num]}"
-            carton_rev_build rev
-        else
-            carton_commit_rev_get rev commit
-        fi
-
-        carton_rev_is_built rev || continue
-
-        while read -r -d, channel; do
-            if ! carton_channel_is_published "$channel" rev; then
-                carton_channel_publish "$channel" rev
-            fi
-        done <<<"${branch[channel_list]}"
-    done
-done
+for while read -r project_name; do
+    declare -A project
+    carton_project_list_get project "$project_name"
+    carton_project_fetch project
+    carton_project_update project
+done <<<"$project_name_list"

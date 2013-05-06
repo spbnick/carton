@@ -1,5 +1,5 @@
 #
-# Carton commit revision management
+# Revision object
 #
 # Copyright (c) 2013 Red Hat, Inc. All rights reserved.
 #
@@ -21,9 +21,9 @@ if [ -z "${_CARTON_REV_SH+set}" ]; then
 declare _CARTON_REV_SH=
 
 . carton_util.sh
-. carton_commit.sh
 
 # Check if a string is a valid revision number.
+# Args: str
 function carton_rev_num_is_valid()
 {
     declare -r str="$1"
@@ -31,119 +31,108 @@ function carton_rev_num_is_valid()
        "$str" =~ ^-?[1-9][0-9]*$ ]]
 }
 
-# Code unpacking common carton_rev_* function arguments.
-declare -r _CARTON_REV_UNPACK='
-    declare -r _commit_var="$1";    shift
-    carton_assert "carton_var_name_is_valid \"\$_commit_var\""
-    declare -r _rev_num="$1";       shift
-    carton_assert \"carton_rev_num_is_valid \"\$rel_num\""
-
-    declare -A _commit
-    carton_aa_copy _commit "$_commit_var"
-
-    declare -r _rev_dir="${_commit[rel_dir]}/$_rev_num"
-'
-
-# Check if a commit revision exists.
-# Args: _commit_var _rev_num
-function carton_rev_exists()
-{
-    eval "$_CARTON_REV_UNPACK"
-    [ -d "$_rev_dir" ]
-}
-
-# Make a commit revision directory.
-# Args: _commit_var _rev_num
-function carton_rev_make()
-{
-    eval "$_CARTON_REV_UNPACK"
-    mkdir "$_rev_dir/"{,rpm}
-}
-
-# Retrieve a commit revision properties into an associative array.
-# Args: _rev_var _commit_var _rev_num
-function carton_get_rev()
-{
-    declare -r _rev_var="$1";    shift
-    carton_assert 'carton_var_name_is_valid "$_rev_var"'
-    eval "$_CARTON_REV_UNPACK"
+# Load base revision properties.
+# Args: _dir _num _dist_dir
+declare -r _CARTON_REV_LOAD_BASE='
+    declare -r _dir="$1";   shift
+    carton_assert "[ -d \"\$_dir\" ]"
+    declare -r _ver="$1";   shift
+    declare -r _num="$1";   shift
+    carton_assert \"carton_rev_num_is_valid \"\$_num\""
 
     declare -A _rev=(
-        [_commit_var]="$_commit_var"
-        [dir]="$_rev_dir"
-        [num]="$_rev_num"
-        [rpm_dir]="$_rev_dir/rpm"
-        [rpm_log]="$_rev_dir/rpm.log"
-        [rpm_stamp]="$_rev_dir/rpm.stamp"
+        [dir]="$_dir"
+        [ver]="$_ver"
+        [num]="$_num"
+        [rpm_dir]="$_dir/rpm"
+        [rpm_stamp]="$_dir/rpm.stamp"
+        [rpm_log]="$_dir/rpm.log"
     )
+'
 
-    carton_aa_copy "$_rev_var" _rev
-}
+# Load revision packages' properties.
+declare -r _CARTON_REV_LOAD_PKGS='
+    if [ -e "${_rev[rpm_stamp]}" ]; then
+        _rev[is_built]=true
+    else
+        _rev[is_built]=false
+    fi
+'
 
-# Build RPM packages for a commit revision.
-# Args: _dist_dir _rpm_dir _rpm_log _rpm_stamp _rev_num
+# Build RPM packages for a revision.
+# Args: _dist_dir _rpm_dir _rpm_log _rpm_stamp _num
 function _carton_rev_build_rpm()
 {
     declare -r _dist_dir="$1";  shift
     declare -r _rpm_dir="$1";   shift
     declare -r _rpm_log="$1";   shift
     declare -r _rpm_stamp="$1"; shift
-    declare -r _rev_num="$1";   shift
+    declare -r _num="$1";       shift
 
     declare -a _rpm_opts=("--define=_topdir $_rpm_dir")
 
-    if ((_rev_num > 0)); then
-        _rpm_opts+=("--define=rev .1.$((_rev_num))")
-    elif ((_rev_num < 0)); then
-        _rpm_opts+=("--define=rev .0.$((-_rev_num))")
+    if ((_num > 0)); then
+        _rpm_opts+=("--define=rev .1.$((_num))")
+    elif ((_num < 0)); then
+        _rpm_opts+=("--define=rev .0.$((-_num))")
     fi
 
     (
-        declare _tarball
-        declare _spec
-
+        set -e
         echo -n "Start: "
         date --rfc-2822
-        set -x
+        (
+            set -x
 
-        mkdir "$_rpm_dir"{,/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}}
+            declare _tarball
+            declare _spec
 
-        for _tarball in "$_dist_dir/"*.tar.gz; do
-            ln -s "$_tarball" "$_rpm_dir/SOURCES/"
-        done
-        for _spec in "$_dist_dir/"*.spec; do
-            ln -s "$_spec" "$_rpm_dir/SPECS/"
-            rpmbuild "${_rpm_opts[@]}" \
-                     -ba "$_rpm_dir/SPECS/$_spec"
-        done
+            mkdir "$_rpm_dir"{,/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}}
 
-        set +x
+            for _tarball in "$_dist_dir/"*.tar.gz; do
+                ln -s "$_tarball" "$_rpm_dir/SOURCES/"
+            done
+            for _spec in "$_dist_dir/"*.spec; do
+                ln -s "$_spec" "$_rpm_dir/SPECS/"
+            done
+            for _spec in "$_rpm_dir/SPECS/"*.spec; do
+                rpmbuild "${_rpm_opts[@]}" -ba "$_spec"
+            done
+        )
         echo -n "End: "
         date --rfc-2822
-    ) > "$_rpm_log" 2>&1
-    touch "$_rpm_stamp"
+    ) > "$_rpm_log" 2>&1 &&
+        touch "$_rpm_stamp"
 }
 
-# Build packages for a commit revision.
-# Args: _rev_var
-function carton_rev_build()
+# Initialize a revision.
+# Args: _rev_var _dir _ver _num _dist_dir
+function carton_rev_init()
 {
-    declare -r _rev_var="$1";   shift
-    carton_assert 'carton_var_name_is_valid "$_rev_var"'
-
-    declare -A _rev
-    carton_aa_copy _rev "$_rev_var"
-    carton_assert '! [ -e "${_rev[rpm_log]}" ]'
-
-    declare -A _commit
-    carton_aa_copy _commit "${_rev[_commit_var]}"
-    carton_assert '[ -e "${_commit[dist_stamp]}" ]'
-
-    _carton_rev_build_rpm "${_commit[dist_dir]}" \
+    declare -r _rev_var="$1";    shift
+    carton_assert 'carton_is_valid_var_name "$_rev_var"'
+    eval "$_CARTON_REV_LOAD_BASE"
+    declare -r _dist_dir="$1";   shift
+    carton_assert "[ -d \"\$_dist_dir\" ]"
+    mkdir "${_rev[rpm_dir]}"
+    _carton_rev_build_rpm "$_dist_dir" \
                           "${_rev[rpm_dir]}" \
                           "${_rev[rpm_log]}" \
                           "${_rev[rpm_stamp]}" \
-                          "$_rev_num"
+                          "${_rev[num]}"
+    eval "$_CARTON_REV_LOAD_PKGS"
+    carton_arr_copy "$_rev_var" _rev
+}
+
+# Load a revision.
+# Args: _rev_var _dir _ver _num
+function carton_rev_load()
+{
+    declare -r _rev_var="$1";    shift
+    carton_assert 'carton_is_valid_var_name "$_rev_var"'
+    eval "$_CARTON_REV_LOAD_BASE
+          $_CARTON_REV_LOAD_PKGS"
+    carton_arr_copy "$_rev_var" _rev
 }
 
 fi # _CARTON_REV_SH

@@ -1,5 +1,5 @@
 #
-# Carton commit management
+# Commit object
 #
 # Copyright (c) 2013 Red Hat, Inc. All rights reserved.
 #
@@ -21,91 +21,46 @@ if [ -z "${_CARTON_COMMIT_SH+set}" ]; then
 declare _CARTON_COMMIT_SH=
 
 . carton_util.sh
-. carton_project.sh
+. carton_rev.sh
 
-declare -r _CARTON_COMMIT_GET_LOC='
-    declare -r _project_var="$1";   shift
-    carton_assert "carton_var_name_is_valid \"\$_project_var\""
-    declare -r _committish="$1";    shift
+# Load base commit properties.
+# Args: _dir
+declare -r _CARTON_COMMIT_LOAD_BASE='
+    declare -r _dir="$1";           shift
+    carton_assert "[ -d \"\$_dir\" ]"
 
-    declare -A _project
-    carton_aa_copy _project "$_project_var"
-
-    declare -A _commit=()
-
-    _commit[hash]=`
-        cd "${_project[git_dir]}" &&
-        git log -n1 --format=format:%h "$_committish"`
-    _commit[dir]="${_project[commit_dir]}/${_commit[hash]}"
-'
-
-declare -r _CARTON_COMMIT_GET_STRUCT='
-    carton_assert "[ -d \"\${_commit[dir]}\" ]"
-    _commit+=(
-        [dist_dir]="${_commit[dir]}/dist"
-        [dist_stamp]="${_commit[dir]}/dist.stamp"
-        [dist_log]="${_commit[dir]}/dist.log"
-        [rev_dir]="${_commit[dir]}/rev"
+    declare -A _commit=(
+        [dir]="$_dir"
+        [dist_dir]="$_dir/dist"
+        [dist_log]="$_dir/dist.log"
+        [dist_stamp]="$_dir/dist.stamp"
+        [rev_dir]="$_dir/rev"
     )
 '
 
-declare -r _CARTON_COMMIT_GET_PROPS='
-    carton_assert "[ -d \"\${_commit[dir]}\" ]"
-
-    _commit[desc]=`git describe --long \
-                                --match="${_project[tag_glob]}" \
-                                "${_commit[hash]}" | cut -d- -f1-2 ||
-                    { [ $? == 128 ] && echo "-"; } ||
-                        false`
-    _commit[tag_name]="${_commit[description]%-*}"
-    _commit[tag_distance]="${_commit[description]#*-}"
-
+# Load commit distribution properties.
+declare -r _CARTON_COMMIT_LOAD_DIST='
     if [ -e "${_commit[dist_stamp]}" ]; then
-        _commit[is_built]="true"
-
+        _commit[is_built]=true
         _commit[dist_ver]=`"${_commit[dist_dir]}/configure" --version |
-                            sed "1 {s/.*[[:blank:]]//;q}"`
-        _commit[dist_tag_name]=`printf "${_project[tag_format]}" \
-                                    "${_commit[dist_ver]}"`
-        if [ "${_commit[dist_tag_name]}" == "${_commit[tag_name]}" ]; then
-            _commit[rev_num]="${_commit[tag_distance]}"
-        else
-            _commit[rev_num]="-${_commit[tag_distance]}"
-        fi
+                                sed "1 {s/.*[[:blank:]]//;q}"`
     else
-        _commit[is_built]="false"
+        _commit[is_built]=false
     fi
 '
 
-# Check if a commit exists.
-# Args: _project_var _committish
-function carton_commit_exists()
-{
-    eval "$_CARTON_COMMIT_GET_LOC"
-    [ -d "${_commit[dir]}" ]
-}
-
-# Create a commit.
-# Args: _commit_var _project_var _committish
-function carton_commit_make()
+# Initialize a commit.
+# Args: _commit_var _dir
+# Input: commit tarball
+function carton_commit_init()
 {
     declare -r _commit_var="$1";    shift
-    carton_assert 'carton_var_name_is_valid "$_commit_var"'
-    eval "$_CARTON_COMMIT_GET_LOC"
-    carton_assert '! carton_commit_exists "$_project_var" "$_committish"'
-
-    mkdir "${_commit[dir]}"
-
-    eval "$_CARTON_COMMIT_GET_STRUCT"
-    mkdir "${_commit[dist_dir]}"
-    mkdir "${_commit[rev_dir]}"
+    carton_assert 'carton_is_valid_var_name "$_commit_var"'
+    eval "$_CARTON_COMMIT_LOAD_BASE"
 
     # Extract the commit, ignoring stored modification time to prevent
     # future timestamps and subsequent build delays
-    (
-        cd "${_project[git_dir]}"
-        git archive --format=tar "${_commit[hash]}"
-    ) | tar --extract --touch --verbose --directory "${_commit[dist_dir]}"
+    tar --extract --touch --verbose --directory "${_commit[dist_dir]}"
 
     # Build the distribution
     (
@@ -130,30 +85,94 @@ function carton_commit_make()
     ) > "${_commit[dist_log]}" 2>&1 &&
         touch "${_commit[dist_stamp]}"
 
-    eval "$_CARTON_COMMIT_GET_PROPS"
-
-    carton_aa_copy "$_commit_var" _commit
+    eval "$_CARTON_COMMIT_LOAD_DIST"
+    carton_arr_copy "$_commit_var" "_commit"
 }
 
-# Remove a commit directory.
-# Args: _project_var _committish
-function carton_commit_rm()
-{
-    eval "$_CARTON_COMMIT_GET_LOC"
-    carton_assert 'carton_commit_exists "$_project_var" "$_committish"'
-    rm -Rf "${_commit[dir]}"
-}
-
-# Retrieve a commit.
-# Args: _commit_var _project_var _committish
-function carton_commit_get()
+# Load a commit.
+# Args: _commit_var _dir
+function carton_commit_load()
 {
     declare -r _commit_var="$1";    shift
-    carton_assert 'carton_var_name_is_valid "$_commit_var"'
-    eval "$_CARTON_COMMIT_GET_LOC
-          $_CARTON_COMMIT_GET_STRUCT
-          $_CARTON_COMMIT_GET_PROPS"
-    carton_aa_copy "$_commit_var" _commit
+    carton_assert 'carton_is_valid_var_name "$_commit_var"'
+    eval "$_CARTON_COMMIT_LOAD_BASE
+          $_CARTON_COMMIT_LOAD_DIST"
+    carton_arr_copy "$_commit_var" "_commit"
+}
+
+# Assign commit revision location variables.
+# Args: _commit_var _rev_num
+declare -r _CARTON_COMMIT_GET_REV_LOC='
+    declare -r _commit_var="$1";   shift
+    carton_assert "carton_is_valid_var_name \"\$_commit_var\""
+    declare -r _rev_num="$1";       shift
+    carton_assert \"carton_rev_num_is_valid \"\$_rev_num\""
+
+    declare -A _commit
+    carton_arr_copy _commit "$_commit_var"
+
+    declare -r _rev_dir="${_commit[rev_dir]}/$_rev_num"
+'
+
+# Check if a commit revision exists.
+# Args: _commit_var _rev_num
+function carton_commit_has_rev()
+{
+    eval "$_CARTON_COMMIT_GET_REV_LOC"
+    [ -d "$_rev_dir" ]
+}
+
+# Create a commit revision.
+# Args: _rev_var _commit_var _rev_num
+function carton_commit_add_rev()
+{
+    declare -r _rev_var="$1";       shift
+    carton_assert 'carton_is_valid_var_name "$_rev_var"'
+    eval "$_CARTON_COMMIT_GET_REV_LOC"
+    carton_assert '${_commit[is_built]}'
+    carton_assert '! carton_commit_has_rev "$_commit_var" "$_rev_num"'
+    mkdir "$_rev_dir"
+    carton_rev_init "$_rev_var" "$_rev_dir" \
+                    "${_commit[dist_ver]}" "$_rev_num" "${_commit[dist_dir]}"
+}
+
+# Get a commit revision.
+# Args: _rev_var _commit_var _rev_num
+function carton_commit_get_rev()
+{
+    declare -r _rev_var="$1";       shift
+    carton_assert 'carton_is_valid_var_name "$_rev_var"'
+    eval "$_CARTON_COMMIT_GET_REV_LOC"
+    carton_assert '${_commit[is_built]}'
+    carton_assert 'carton_commit_has_rev "$_commit_var" "$_rev_num"'
+    carton_rev_load "$_rev_var" "$_rev_dir" "${_commit[dist_ver]}" "$_rev_num"
+}
+
+# Create or get a commit revision.
+# Args: _rev_var _commit_var _rev_num
+function carton_commit_add_or_get_rev()
+{
+    declare -r _rev_var="$1";       shift
+    carton_assert 'carton_is_valid_var_name "$_rev_var"'
+    declare -r _commit_var="$1";    shift
+    carton_assert 'carton_is_valid_var_name "$_commit_var"'
+    declare -r _rev_num="$1";       shift
+    carton_assert 'carton_rev_num_is_valid "$_rev_num"'
+
+    if carton_commit_rev_exists "$_commit_var" "$_rev_num"; then
+        carton_commit_get_rev "$_rev_var" "$_commit_var" "$_rev_num"
+    else
+        carton_commit_add_rev "$_rev_var" "$_commit_var" "$_rev_num"
+    fi
+}
+
+# Delete a commit revision.
+# Args: _commit_var _rev_num
+function carton_commit_del_rev()
+{
+    eval "$_CARTON_COMMIT_GET_REV_LOC"
+    carton_assert '${_commit[is_built]}'
+    rm -Rf "$_rev_dir"
 }
 
 fi # _CARTON_COMMIT_SH

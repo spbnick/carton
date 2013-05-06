@@ -1,5 +1,5 @@
 #
-# Carton build server functions
+# Carton build server
 #
 # Copyright (c) 2013 Red Hat, Inc. All rights reserved.
 #
@@ -20,23 +20,32 @@
 if [ -z "${_CARTON_SH+set}" ]; then
 declare _CARTON_SH=
 
-CARTON_ENV=`carton-env`
-eval "$CARTON_ENV"
-
 . carton_util.sh
-. carton_rel.sh
-. carton_repo.sh
+. carton_project_list.sh
+. carton_repo_list.sh
 
+declare -r CARTON_REPO_LOCK_TIMEOUT="10 minutes"
+declare -r CARTON_REPO_LOCK_INTERVAL="5s"
+
+# Initialize data directory.
+function carton_init()
+{
+    carton_assert "[ -d \"\$CARTON_DATA_DIR\" ]"
+    mkdir "$CARTON_REPO_LIST_DIR"
+    mkdir "$CARTON_PROJECT_LIST_DIR"
+}
+
+<<"DISABLED"
 # Publish a release RPM package to a repository
 # Args: project_name committish rel_num repo_name
 function carton_publish_rpm()
 {
     declare -r project_name="$1";   shift
-    carton_assert 'carton_fs_name_is_valid "$project_name"'
+    carton_assert 'carton_is_valid_fs_name "$project_name"'
     declare -r committish="$1";     shift
     declare -r rel_num="$1";        shift
     declare -r repo_name="$1";      shift
-    carton_assert 'carton_fs_name_is_valid "$repo_name"'
+    carton_assert 'carton_is_valid_fs_name "$repo_name"'
 
     (
         carton_get_project project_ "$project_name"
@@ -102,5 +111,6 @@ function carton_publish_rpm()
         )
     )
 }
+DISABLED
 
 fi # _CARTON_SH

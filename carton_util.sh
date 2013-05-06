@@ -40,25 +40,25 @@ function carton_assert()
     eval "$@" || carton_abort "Assertion failed: $@"
 }
 
-# Check if a filesystem name is valid
-# Args: name
-function carton_fs_name_is_valid()
+# Check if a string is a valid filesystem name.
+# Args: str
+function carton_is_valid_fs_name()
 {
-    declare -r name="$1"
-    [[ "$name" =~ ^[A-Za-z0-9_-]+$ ]]
+    declare -r str="$1"
+    [[ "$str" =~ ^[A-Za-z0-9_-]+$ ]]
 }
 
-# Check if a variable name is valid
+# Check if a string is a valid variable name.
 # Args: name
-function carton_var_name_is_valid()
+function carton_is_valid_var_name()
 {
-    declare -r name="$1"
-    [[ "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]
+    declare -r str="$1"
+    [[ "$str" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]
 }
 
-# Copy associative array contents
+# Copy (associative) array contents.
 # Args: _dst _src
-function carton_aa_copy()
+function carton_arr_copy()
 {
     declare _dst="$1";  shift
     declare _src="$1";  shift

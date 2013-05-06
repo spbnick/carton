@@ -1,5 +1,5 @@
 #
-# Carton repo management
+# Package repository object
 #
 # Copyright (c) 2013 Red Hat, Inc. All rights reserved.
 #
@@ -20,34 +20,98 @@
 if [ -z "${_CARTON_REPO_SH+set}" ]; then
 declare _CARTON_REPO_SH=
 
-CARTON_ENV=`carton-env`
-eval "$CARTON_ENV"
-
 . carton_util.sh
-. carton_project.sh
 
-declare -r CARTON_REPO_DIR="$CARTON_DATA_DIR/repo"
-declare -r CARTON_REPO_LOCK_TIMEOUT="10 minutes"
-declare -r CARTON_REPO_LOCK_INTERVAL="5s"
+# Load base repository parameters
+# Args: _dir
+declare -r _CARTON_REPO_LOAD_BASE='
+    declare -r _dir="$1";       shift
+    carton_assert "[ -d \"\$_dir\" ]"
 
-# Generate a script assigning release variables with specified prefix.
-# Args: repo_ repo_name
-function carton_repo_get()
+    declare -A _repo=(
+        [dir]="$_dir"
+        [rpm_dir]="$_dir/rpm"
+    )
+'
+
+# Initialize a repo.
+# Args: _repo_var _dir
+function carton_repo_init()
 {
-    declare -r repo_="$1";      shift
-    declare -r repo_name="$1";  shift
-    carton_assert 'carton_fs_name_is_valid "$repo_name"'
+    declare -r _repo_var="$1";  shift
+    carton_assert 'carton_is_valid_var_name "$_repo_var"'
+    eval "$_CARTON_REPO_LOAD_BASE"
+    createrepo "${_repo[dir]}"
+    carton_arr_copy "$_repo_var" _repo
+}
 
-    cat <<EOF
-        set -o errexit
-        declare -r ${repo_}dir="\$CARTON_REPO_DIR/$repo_name"
-        declare -r ${repo_}lock="\$CARTON_REPO_DIR/$repo_name.lock"
-        declare -r ${repo_}rpm_link="\$${repo_}dir/yum"
-        declare -r ${repo_}rpm_new_link="\$${repo_}dir/yum.new"
-        declare -r ${repo_}rpm_dir="\$${repo_}dir/yum.dir"
-        declare -r ${repo_}rpm_old_dir="\$${repo_}dir/yum.dir.new"
-        declare -r ${repo_}rpm_evr_regex=".*"
-EOF
+# Load a repo.
+# Args: _repo_var _dir
+function carton_repo_load()
+{
+    declare -r _repo_var="$1";  shift
+    carton_assert 'carton_is_valid_var_name "$_repo_var"'
+    eval "$_CARTON_REPO_LOAD_BASE"
+    carton_arr_copy "$_repo_var" _repo
+}
+
+# Get repo/revision pair from arguments
+# Args: _repo_var _rev_var
+declare -r _CARTON_REPO_GET_REPO_AND_REV='
+    declare -r _repo_var="$1"; shift
+    carton_assert "carton_is_valid_var_name \"\$_repo_var\""
+    declare -r _rev_var="$1"; shift
+    carton_assert "carton_is_valid_var_name \"\$_rev_var\""
+    declare -A _repo
+    carton_arr_copy "_repo" "$_repo_var"
+    declare -A _rev
+    carton_arr_copy "_rev" "$_rev_var"
+'
+
+# Check if a commit revision is published in a repo.
+# Args: _repo_var _rev_var
+function carton_repo_is_published()
+{
+    eval "$_CARTON_REPO_GET_REPO_AND_REV"
+    declare f
+    while read -r f; do
+        if ! [ -e "${_repo[rpm_dir]}/$f" ]; then
+            return 1
+        fi
+    done < <(
+        find "${_rev[rpm_dir]}" -name "*.rpm" -printf '%f\n'
+    )
+    return 0
+}
+
+#
+# TODO Atomic publishing/withdrawing
+#
+
+# Publish a commit revision in a repo.
+# Args: _repo_var _rev_var
+function carton_repo_publish()
+{
+    eval "$_CARTON_REPO_GET_REPO_AND_REV"
+    carton_assert '! carton_repo_is_published "$_repo_var" "$_rev_var"'
+    find "${_rev[rpm_dir]}" -name "*.rpm" -print0 |
+        xargs -0 cp -t "${_repo[rpm_dir]}"
+    createrepo --update "${_repo[rpm_dir]}"
+}
+
+# Withdraw (remove) a commit revision from a repo.
+# Args: _repo_var _rev_var
+function carton_repo_withdraw()
+{
+    eval "$_CARTON_REPO_GET_REPO_AND_REV"
+    carton_assert 'carton_repo_is_published "$_repo_var" "$_rev_var"'
+    declare f
+    while read -r f; do
+        rm "${_repo[rpm_dir]}/$f"
+    done < <(
+        find "${_rev[rpm_dir]}" -name "*.rpm" -printf '%f\n'
+    )
+    createrepo --update "${_repo[rpm_dir]}"
 }
 
 fi # _CARTON_REPO_SH
