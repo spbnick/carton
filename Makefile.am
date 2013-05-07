@@ -15,11 +15,7 @@
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA 02110-1301, USA.
 
-SUBDIRS = lib
-
-dist_bin_SCRIPTS = \
-    carton-env \
-    carton-update
+SUBDIRS = lib src
 
 CARTON_LIB_DIR = $(pkgdatadir)
 CARTON_DATA_DIR = $(localstatedir)/lib/carton
