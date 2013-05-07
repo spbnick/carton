@@ -19,8 +19,6 @@ SUBDIRS = lib
 
 dist_bin_SCRIPTS = \
     carton-env \
-    carton-build \
-    carton-publish \
     carton-update
 
 CARTON_LIB_DIR = $(pkgdatadir)
