@@ -38,7 +38,7 @@ declare -r _CARTON_REV_LOAD_BASE='
     carton_assert "[ -d \"\$_dir\" ]"
     declare -r _ver="$1";   shift
     declare -r _num="$1";   shift
-    carton_assert \"carton_rev_num_is_valid \"\$_num\""
+    carton_assert "carton_rev_num_is_valid \"\$_num\""
 
     declare -A _rev=(
         [dir]="$_dir"
@@ -78,14 +78,21 @@ function _carton_rev_build_rpm()
     fi
 
     (
-        set -e
+        declare _status
+
         echo -n "Start: "
         date --rfc-2822
+        set +o errexit
         (
-            set -x
+            set -o errexit -o xtrace
 
             declare _tarball
             declare _spec
+
+            # Check distribution has tarballs
+            [ -f "$_dist_dir/"*.tar.gz ]
+            # Check distribution has spec files
+            [ -f "$_dist_dir/"*.spec ]
 
             mkdir "$_rpm_dir"{,/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}}
 
@@ -99,10 +106,14 @@ function _carton_rev_build_rpm()
                 rpmbuild "${_rpm_opts[@]}" -ba "$_spec"
             done
         )
+        _status="$?"
+        set -o errexit
+        if [ "$_status" == 0 ]; then
+            touch "$_rpm_stamp"
+        fi
         echo -n "End: "
         date --rfc-2822
-    ) > "$_rpm_log" 2>&1 &&
-        touch "$_rpm_stamp"
+    ) > "$_rpm_log" 2>&1
 }
 
 # Initialize a revision.
@@ -114,7 +125,6 @@ function carton_rev_init()
     eval "$_CARTON_REV_LOAD_BASE"
     declare -r _dist_dir="$1";   shift
     carton_assert "[ -d \"\$_dist_dir\" ]"
-    mkdir "${_rev[rpm_dir]}"
     _carton_rev_build_rpm "$_dist_dir" \
                           "${_rev[rpm_dir]}" \
                           "${_rev[rpm_log]}" \
