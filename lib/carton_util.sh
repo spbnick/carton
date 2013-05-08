@@ -23,6 +23,28 @@ declare _CARTON_UTIL_SH=
 CARTON_ENV=`carton-env`
 eval "$CARTON_ENV"
 
+# Unindent text by removing at most the number of spaces present in the first
+# non-empty line from the beginning of every line.
+# Input: indented text
+# Output: unindented text
+function carton_unindent()
+{
+    awk --re-interval '
+        BEGIN {
+            p = ""
+        }
+        {
+            l = $0
+            if (l != "") {
+                if (p == "")
+                    p = "^ {0," (match(l, /[^ ]/) - 1) "}"
+                sub(p, "", l)
+            }
+            print l
+        }
+    '
+}
+
 # Abort shell, optionally outputting a message to stderr.
 # Args: [echo_arg]...
 function carton_abort()
