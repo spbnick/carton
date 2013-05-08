@@ -8,9 +8,6 @@ BuildArch:  noarch
 Source:     %{name}-%{version}.tar.gz
 
 Requires:   git
-Requires:   autoconf
-Requires:   automake
-Requires:   libtool
 Requires:   rpm-build
 Requires:   createrepo
 
