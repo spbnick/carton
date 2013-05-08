@@ -1,5 +1,5 @@
 #
-# Commit object
+# Commit
 #
 # Copyright (c) 2013 Red Hat, Inc. All rights reserved.
 #
@@ -58,19 +58,22 @@ function carton_commit_init()
     carton_assert 'carton_is_valid_var_name "$_commit_var"'
     eval "$_CARTON_COMMIT_LOAD_BASE"
 
+    mkdir "${_commit[dist_dir]}"
+    mkdir "${_commit[rev_dir]}"
+
     # Extract the commit, ignoring stored modification time to prevent
     # future timestamps and subsequent build delays
-    tar --extract --touch --verbose --directory "${_commit[dist_dir]}"
+    tar --extract --touch --directory "${_commit[dist_dir]}"
 
     # Build the distribution
     (
-        set -e
         cd "${_commit[dist_dir]}"
 
         echo -n "Start: "
         date --rfc-2822
+        set +o errexit
         (
-            set -x
+            set -o errexit -o xtrace
 
             # Check that there are no tarballs in the source
             ! test -e *.tar.gz
@@ -80,10 +83,14 @@ function carton_commit_init()
             ./configure
             make distcheck
         )
+        _status="$?"
+        set -o errexit
+        if [ "$_status" == 0 ]; then
+            touch "${_commit[dist_stamp]}"
+        fi
         echo -n "End: "
         date --rfc-2822
-    ) > "${_commit[dist_log]}" 2>&1 &&
-        touch "${_commit[dist_stamp]}"
+    ) > "${_commit[dist_log]}" 2>&1
 
     eval "$_CARTON_COMMIT_LOAD_DIST"
     carton_arr_copy "$_commit_var" "_commit"
