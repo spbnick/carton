@@ -25,8 +25,8 @@ ep_suite_init "$@"
 
 declare -r DATA_DIR=`mktemp --tmpdir -d test-commit-sh.XXXXXXXX`
 ep_teardown_push rm -Rf "$DATA_DIR"
-declare -r REPO_DIR="$DATA_DIR/repo"
-declare GIT_DIR="$DATA_DIR/repo/.git"
+declare -r WORK_DIR="$DATA_DIR/work"
+declare GIT_DIR="$DATA_DIR/work/.git"
 declare -r DIST_DIR="$DATA_DIR/dist"
 declare -r REV_DIR="$DATA_DIR/rev"
 
@@ -133,7 +133,7 @@ ep_test_begin source; (
 ); ep_test_end
 
 . carton_rev.sh
-test_git_make "$REPO_DIR"
+test_git_make "$WORK_DIR"
 
 test_commit pre-v1-pre-spec add_spec^   1   -1  false   ""
 test_commit pre-v1-spec     add_spec    1   -2  true    "1.0.2"

@@ -25,8 +25,8 @@ ep_suite_init "$@"
 
 declare -r DATA_DIR=`mktemp --tmpdir -d test-commit-sh.XXXXXXXX`
 ep_teardown_push rm -Rf "$DATA_DIR"
-declare -r REPO_DIR="$DATA_DIR/repo"
-declare GIT_DIR="$REPO_DIR/.git"
+declare -r WORK_DIR="$DATA_DIR/work"
+declare GIT_DIR="$WORK_DIR/.git"
 declare -r COMMIT_DIR="$DATA_DIR/commit"
 
 # Run tests for a single commit
@@ -117,7 +117,7 @@ ep_test_begin source; (
 
 . carton_commit.sh
 
-test_git_make "$REPO_DIR"
+test_git_make "$WORK_DIR"
 
 test_commit pre_v1_bare     add_build^  false   ""
 test_commit pre_v1_build    add_build   true    "1"
