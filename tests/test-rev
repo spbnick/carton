@@ -1,0 +1,144 @@
+#!/bin/bash
+#
+# carton_rev.sh tests
+#
+# Copyright (c) 2013 Red Hat, Inc. All rights reserved.
+#
+# This copyrighted material is made available to anyone wishing
+# to use, modify, copy, or redistribute it subject to the terms
+# and conditions of the GNU General Public License version 2.
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public
+# License along with this program; if not, write to the Free
+# Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
+
+eval "`ep_env && carton-env || echo false`"
+. test_git.sh
+. ep.sh
+ep_suite_init "$@"
+
+declare -r DATA_DIR=`mktemp --tmpdir -d test-commit-sh.XXXXXXXX`
+ep_teardown_push rm -Rf "$DATA_DIR"
+declare -r REPO_DIR="$DATA_DIR/repo"
+declare GIT_DIR="$DATA_DIR/repo/.git"
+declare -r DIST_DIR="$DATA_DIR/dist"
+declare -r REV_DIR="$DATA_DIR/rev"
+
+# Run tests for a single commit
+# Args: name committish dist_ver rev_num is_built release
+function test_commit()
+{
+    declare -r name="$1";       shift
+    declare -r committish="$1"; shift
+    declare -r dist_ver="$1";   shift
+    declare -r rev_num="$1";    shift
+    declare -r is_built="$1";   shift
+    declare -r release="$1";    shift
+
+    ep_suite_begin "$name"; (
+        ep_suite_init
+
+        mkdir "$DIST_DIR"
+        ep_teardown_push rm -Rf "$DIST_DIR"
+        GIT_DIR="$GIT_DIR" git archive --format=tar "$committish" |
+        (
+            cd "$DIST_DIR"
+            tar --extract --touch
+            ./bootstrap
+            ./configure
+            make distcheck
+        ) >/dev/null 2>&1
+
+        ep_suite_begin init; (
+            ep_suite_init
+            ep_suite_begin exec; (
+                ep_suite_init
+
+                mkdir "$REV_DIR"
+                ep_teardown_push rm -Rf "$REV_DIR"
+
+                ep_test_begin "do"; (
+                    ep_test_init
+                    declare -A rev
+                    carton_rev_init rev "$REV_DIR" \
+                                    "$dist_ver" "$rev_num" "$DIST_DIR"
+                ); ep_test_end
+            ); ep_suite_end
+
+            ep_suite_begin verify; (
+                ep_suite_init
+
+                mkdir "$REV_DIR"
+                ep_teardown_push rm -Rf "$REV_DIR"
+
+                declare -A rev
+                carton_rev_init rev "$REV_DIR" \
+                                "$dist_ver" "$rev_num" "$DIST_DIR"
+
+                ep_test is_built [ "${rev[is_built]}" == "$is_built" ]
+                if $is_built; then
+                    ep_test has_rpm ls -l \
+                        "${rev[rpm_dir]}/RPMS/noarch/carton-test-$dist_ver-$release.noarch.rpm"
+                    ep_test has_srpm ls -l \
+                        "${rev[rpm_dir]}/SRPMS/carton-test-$dist_ver-$release.src.rpm"
+                fi
+            ); ep_suite_end
+        ); ep_suite_end
+
+        ep_suite_begin load; (
+            ep_suite_init
+
+            mkdir "$REV_DIR"
+            ep_teardown_push rm -Rf "$REV_DIR"
+            (
+                declare -A rev
+                carton_rev_init rev "$REV_DIR" \
+                                "$dist_ver" "$rev_num" "$DIST_DIR"
+            )
+
+            ep_test_begin exec; (
+                ep_test_init
+                declare -A rev
+                carton_rev_load rev "$REV_DIR" "$dist_ver" "$rev_num"
+            ); ep_test_end
+
+            ep_suite_begin verify; (
+                ep_suite_init
+                declare -A rev
+                carton_rev_load rev "$REV_DIR" "$dist_ver" "$rev_num"
+                ep_test is_built [ "${rev[is_built]}" == "$is_built" ]
+                if $is_built; then
+                    ep_test has_rpm test -f \
+                        "${rev[rpm_dir]}/RPMS/noarch/carton-test-$dist_ver-$release.noarch.rpm"
+                    ep_test has_srpm test -f \
+                        "${rev[rpm_dir]}/SRPMS/carton-test-$dist_ver-$release.src.rpm"
+                fi
+            ); ep_suite_end
+        ); ep_suite_end
+    ); ep_suite_end
+}
+
+# Workaround vim subshell syntax highlighting issue
+{
+
+ep_test_begin source; (
+    ep_test_init
+    . carton_rev.sh
+); ep_test_end
+
+. carton_rev.sh
+test_git_make "$REPO_DIR"
+
+test_commit pre-v1-pre-spec add_spec^   1   -1  false   ""
+test_commit pre-v1-spec     add_spec    1   -2  true    "1.0.2"
+test_commit v1              v1          1   0   true    "1"
+test_commit post-v1         v2_update^  1   1   true    "1.1.1"
+test_commit v2              v2          2   0   true    "1"
+
+} # Workaround vim subshell syntax highlighting issue

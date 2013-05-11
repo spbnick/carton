@@ -1,0 +1,127 @@
+#!/bin/bash
+#
+# carton_commit.sh tests
+#
+# Copyright (c) 2013 Red Hat, Inc. All rights reserved.
+#
+# This copyrighted material is made available to anyone wishing
+# to use, modify, copy, or redistribute it subject to the terms
+# and conditions of the GNU General Public License version 2.
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public
+# License along with this program; if not, write to the Free
+# Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
+
+eval "`ep_env && carton-env || echo false`"
+. test_git.sh
+. ep.sh
+ep_suite_init "$@"
+
+declare -r DATA_DIR=`mktemp --tmpdir -d test-commit-sh.XXXXXXXX`
+ep_teardown_push rm -Rf "$DATA_DIR"
+declare -r REPO_DIR="$DATA_DIR/repo"
+declare GIT_DIR="$REPO_DIR/.git"
+declare -r COMMIT_DIR="$DATA_DIR/commit"
+
+# Run tests for a single commit
+# Args: name committish is_built dist_ver
+function test_commit()
+{
+    declare -r name="$1";       shift
+    declare -r committish="$1"; shift
+    declare -r is_built="$1";   shift
+    declare -r dist_ver="$1";   shift
+
+    ep_suite_begin "$name"; (
+        ep_suite_init
+        ep_suite_begin init; (
+            ep_suite_init
+            ep_suite_begin exec; (
+                ep_suite_init
+
+                mkdir "$COMMIT_DIR"
+                ep_teardown_push rm -Rf "$COMMIT_DIR"
+
+                declare -A commit
+
+                ep_test_begin "do"; (
+                    ep_test_init
+                    carton_commit_init commit "$COMMIT_DIR" < <(
+                        GIT_DIR="$GIT_DIR" git archive --format=tar \
+                                                       "$committish"
+                    )
+                ); ep_test_end
+            ); ep_suite_end
+
+            ep_suite_begin verify; (
+                ep_suite_init
+
+                mkdir "$COMMIT_DIR"
+                ep_teardown_push rm -Rf "$COMMIT_DIR"
+
+                declare -A commit
+                carton_commit_init commit "$COMMIT_DIR" < <(
+                    GIT_DIR="$GIT_DIR" git archive --format=tar "$committish"
+                )
+                ep_test is_built [ "${commit[is_built]}" == "$is_built" ]
+                if $is_built; then
+                    ep_test dist_ver [ "${commit[dist_ver]}" == "$dist_ver" ]
+                fi
+            ); ep_suite_end
+        ); ep_suite_end
+
+        ep_suite_begin load; (
+            ep_suite_init
+
+            mkdir "$COMMIT_DIR"
+            ep_teardown_push rm -Rf "$COMMIT_DIR"
+            (
+                declare -A commit
+                carton_commit_init commit "$COMMIT_DIR" < <(
+                    GIT_DIR="$GIT_DIR" git archive --format=tar "$committish"
+                )
+            )
+
+            ep_test_begin exec; (
+                ep_test_init
+                declare -A commit
+                carton_commit_load commit "$COMMIT_DIR"
+            ); ep_test_end
+
+            ep_suite_begin verify; (
+                ep_suite_init
+                declare -A commit
+                carton_commit_load commit "$COMMIT_DIR"
+                ep_test is_built [ "${commit[is_built]}" == "$is_built" ]
+                if $is_built; then
+                    ep_test dist_ver [ "${commit[dist_ver]}" == "$dist_ver" ]
+                fi
+            ); ep_suite_end
+        ); ep_suite_end
+    ); ep_suite_end
+}
+
+# Workaround vim subshell syntax highlighting issue
+{
+
+ep_test_begin source; (
+    ep_test_init
+    . carton_commit.sh
+); ep_test_end
+
+. carton_commit.sh
+
+test_git_make "$REPO_DIR"
+
+test_commit pre_v1_bare     add_build^  false   ""
+test_commit pre_v1_build    add_build   true    "1"
+test_commit pre_v1_spec     add_spec    true    "1"
+test_commit v2              v2          true    "2"
+
+} # Workaround vim subshell syntax highlighting issue

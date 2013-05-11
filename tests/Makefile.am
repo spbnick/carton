@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2012-2013 Red Hat, Inc. All rights reserved.
+# Copyright (c) 2013 Red Hat, Inc. All rights reserved.
 #
 # This copyrighted material is made available to anyone wishing
 # to use, modify, copy, or redistribute it subject to the terms
@@ -15,17 +15,16 @@
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA 02110-1301, USA.
 
-SUBDIRS = lib src tests
+TESTS = test-all
+TESTS_ENVIRONMENT = PATH="$(srcdir):$(top_srcdir)/src:$$PATH"
 
-CARTON_LIB_DIR = $(pkgdatadir)
-CARTON_DATA_DIR = $(localstatedir)/lib/carton
+dist_noinst_DATA = \
+    test_git.sh
 
-install-data-hook:
-	$(MKDIR_P) "$(DESTDIR)$(CARTON_DATA_DIR)"
-	mkdir "$(DESTDIR)$(CARTON_DATA_DIR)/project"
-	mkdir "$(DESTDIR)$(CARTON_DATA_DIR)/repo"
+dist_noinst_SCRIPTS = \
+    test-all            \
+    test-commit         \
+    test-rev
 
-install-exec-hook:
-	$(SED) -e 's#\(CARTON_LIB_DIR=\).*#\1"$(CARTON_LIB_DIR)"#' \
-           -e 's#\(CARTON_DATA_DIR=\).*#\1"$${CARTON_DATA_DIR-$(CARTON_DATA_DIR)}"#' \
-           -i "$(DESTDIR)$(bindir)/carton-env"
+check_DATA = $(dist_noinst_DATA)
+check_SCRIPTS = $(dist_noinst_SCRIPTS)

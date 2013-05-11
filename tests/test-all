@@ -1,5 +1,8 @@
+#!/bin/bash
 #
-# Copyright (c) 2012-2013 Red Hat, Inc. All rights reserved.
+# All tests
+#
+# Copyright (c) 2013 Red Hat, Inc. All rights reserved.
 #
 # This copyrighted material is made available to anyone wishing
 # to use, modify, copy, or redistribute it subject to the terms
@@ -15,17 +18,9 @@
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA 02110-1301, USA.
 
-SUBDIRS = lib src tests
+eval "`ep_env || echo false`"
+. ep.sh
+ep_suite_init "$@"
 
-CARTON_LIB_DIR = $(pkgdatadir)
-CARTON_DATA_DIR = $(localstatedir)/lib/carton
-
-install-data-hook:
-	$(MKDIR_P) "$(DESTDIR)$(CARTON_DATA_DIR)"
-	mkdir "$(DESTDIR)$(CARTON_DATA_DIR)/project"
-	mkdir "$(DESTDIR)$(CARTON_DATA_DIR)/repo"
-
-install-exec-hook:
-	$(SED) -e 's#\(CARTON_LIB_DIR=\).*#\1"$(CARTON_LIB_DIR)"#' \
-           -e 's#\(CARTON_DATA_DIR=\).*#\1"$${CARTON_DATA_DIR-$(CARTON_DATA_DIR)}"#' \
-           -i "$(DESTDIR)$(bindir)/carton-env"
+ep_suite rev        test-rev
+ep_suite commit     test-commit
