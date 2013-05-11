@@ -24,3 +24,4 @@ ep_suite_init "$@"
 
 ep_suite rev        test-rev
 ep_suite commit     test-commit
+ep_suite repo       test-repo

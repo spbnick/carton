@@ -24,6 +24,7 @@ dist_noinst_DATA = \
 dist_noinst_SCRIPTS = \
     test-all            \
     test-commit         \
+    test-repo           \
     test-rev
 
 check_DATA = $(dist_noinst_DATA)
