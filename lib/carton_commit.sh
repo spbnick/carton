@@ -113,7 +113,7 @@ declare -r _CARTON_COMMIT_GET_REV_LOC='
     declare -r _commit_var="$1";   shift
     carton_assert "carton_is_valid_var_name \"\$_commit_var\""
     declare -r _rev_num="$1";       shift
-    carton_assert \"carton_rev_num_is_valid \"\$_rev_num\""
+    carton_assert "carton_rev_num_is_valid \"\$_rev_num\""
 
     declare -A _commit
     carton_arr_copy _commit "$_commit_var"
