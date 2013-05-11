@@ -41,7 +41,8 @@ function carton_repo_init()
     declare -r _repo_var="$1";  shift
     carton_assert 'carton_is_valid_var_name "$_repo_var"'
     eval "$_CARTON_REPO_LOAD_BASE"
-    createrepo "${_repo[dir]}"
+    mkdir "${_repo[rpm_dir]}"
+    createrepo --quiet "${_repo[rpm_dir]}"
     carton_arr_copy "$_repo_var" _repo
 }
 
@@ -96,7 +97,7 @@ function carton_repo_publish()
     carton_assert '! carton_repo_is_published "$_repo_var" "$_rev_var"'
     find "${_rev[rpm_dir]}" -name "*.rpm" -print0 |
         xargs -0 cp -t "${_repo[rpm_dir]}"
-    createrepo --update "${_repo[rpm_dir]}"
+    createrepo --quiet --update "${_repo[rpm_dir]}"
 }
 
 # Withdraw (remove) a commit revision from a repo.
@@ -111,7 +112,7 @@ function carton_repo_withdraw()
     done < <(
         find "${_rev[rpm_dir]}" -name "*.rpm" -printf '%f\n'
     )
-    createrepo --update "${_repo[rpm_dir]}"
+    createrepo --quiet --update "${_repo[rpm_dir]}"
 }
 
 fi # _CARTON_REPO_SH
