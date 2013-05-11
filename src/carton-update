@@ -19,8 +19,7 @@
 # Boston, MA 02110-1301, USA.
 
 set -e -u -o pipefail -o noclobber
-CARTON_ENV=`carton-env`
-eval "$CARTON_ENV"
+eval "`carton-env || echo false`"
 
 if [ $# != 0 ] && [ $# != 1 ]; then
     echo "Invalid number of arguments" >&2
