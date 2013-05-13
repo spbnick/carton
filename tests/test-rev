@@ -23,7 +23,7 @@ eval "`ep_env && carton-env || echo false`"
 . ep.sh
 ep_suite_init "$@"
 
-declare -r DATA_DIR=`mktemp --tmpdir -d test-commit-sh.XXXXXXXX`
+declare -r DATA_DIR=`mktemp --tmpdir -d carton-test.XXXXXXXX`
 ep_teardown_push rm -Rf "$DATA_DIR"
 declare -r WORK_DIR="$DATA_DIR/work"
 declare GIT_DIR="$DATA_DIR/work/.git"

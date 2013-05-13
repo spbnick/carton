@@ -22,7 +22,7 @@ eval "`ep_env || echo false`"
 . ep.sh
 ep_suite_init "$@"
 
-declare CARTON_DATA_DIR=`mktemp --tmpdir -d test-commit-sh.XXXXXXXX`
+declare CARTON_DATA_DIR=`mktemp --tmpdir -d carton-test.XXXXXXXX`
 ep_teardown_push rm -Rf "$CARTON_DATA_DIR"
 eval "`carton-env || echo false`"
 

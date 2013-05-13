@@ -25,7 +25,7 @@ ep_suite_init "$@"
 
 . carton_commit.sh
 
-declare -r DATA_DIR=`mktemp --tmpdir -d test-commit-sh.XXXXXXXX`
+declare -r DATA_DIR=`mktemp --tmpdir -d carton-test.XXXXXXXX`
 ep_teardown_push rm -Rf "$DATA_DIR"
 declare -r WORK_DIR="$DATA_DIR/work"
 test_git_make "$WORK_DIR"
