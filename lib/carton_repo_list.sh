@@ -61,7 +61,7 @@ function carton_repo_list_has_repo()
 # Args: _repo_var _repo_name
 function carton_repo_list_add_repo()
 {
-    declare -r _repo_var
+    declare -r _repo_var="$1";  shift
     carton_assert "carton_is_valid_var_name \"\$_repo_var\""
     eval "$_CARTON_REPO_LIST_GET_REPO_LOC"
     carton_assert "! carton_repo_list_has_repo \"\$_repo_name\""
@@ -73,7 +73,7 @@ function carton_repo_list_add_repo()
 # Args: _repo_var _repo_name
 function carton_repo_list_get_repo()
 {
-    declare -r _repo_var
+    declare -r _repo_var="$1";  shift
     carton_assert "carton_is_valid_var_name \"\$_repo_var\""
     eval "$_CARTON_REPO_LIST_GET_REPO_LOC"
     carton_assert "carton_repo_list_has_repo \"\$_repo_name\""
@@ -85,6 +85,7 @@ function carton_repo_list_get_repo()
 function carton_repo_list_del_repo()
 {
     eval "$_CARTON_REPO_LIST_GET_REPO_LOC"
+    carton_assert "carton_repo_list_has_repo \"\$_repo_name\""
     rm -Rf -- "$_repo_dir"
 }
 
