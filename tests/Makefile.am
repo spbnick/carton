@@ -23,6 +23,7 @@ dist_noinst_DATA = \
 
 dist_noinst_SCRIPTS = \
     test-all            \
+    test-channel		\
     test-commit         \
     test-repo           \
     test-repo-list      \
