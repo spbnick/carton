@@ -31,8 +31,16 @@ declare -r CARTON_REPO_LOCK_INTERVAL="5s"
 function carton_init()
 {
     carton_assert "[ -d \"\$CARTON_DATA_DIR\" ]"
-    mkdir "$CARTON_REPO_LIST_DIR"
     mkdir "$CARTON_PROJECT_LIST_DIR"
+    mkdir "$CARTON_REPO_LIST_DIR"
+}
+
+# Cleanup data directory.
+function carton_cleanup()
+{
+    carton_assert "[ -d \"\$CARTON_DATA_DIR\" ]"
+    rm -Rf "$CARTON_REPO_LIST_DIR"
+    rm -Rf "$CARTON_PROJECT_LIST_DIR"
 }
 
 <<"DISABLED"
