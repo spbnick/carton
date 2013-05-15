@@ -46,27 +46,20 @@ declare -r WORK_DIR="$DATA_DIR/work"
 test_git_make "$WORK_DIR"
 declare GIT_DIR="$WORK_DIR/.git"
 
-declare -r v1_dir="$DATA_DIR/v1"
-mkdir "$v1_dir"
-declare -A v1
-carton_commit_init v1 "$v1_dir" < <(
+declare -r v1_dir="$DATA_DIR/v1" v2_dir="$DATA_DIR/v2"
+mkdir "$v1_dir" "$v2_dir"
+declare v1 v2
+v1=`carton_commit_init "$v1_dir" < <(
     GIT_DIR="$GIT_DIR" git archive --format=tar "v1"
-)
-
-declare -r v2_dir="$DATA_DIR/v2"
-mkdir "$v2_dir"
-declare -A v2
-carton_commit_init v2 "$v2_dir" < <(
+)`
+v2=`carton_commit_init "$v2_dir" < <(
     GIT_DIR="$GIT_DIR" git archive --format=tar "v2"
-)
-declare -A v1_r_minus1
-carton_commit_add_rev v1_r_minus1 v1 -1
-declare -A v1_r_0
-carton_commit_add_rev v1_r_0 v1 0
-declare -A v1_r_1
-carton_commit_add_rev v1_r_1 v1 1
-declare -A v2_r_0
-carton_commit_add_rev v2_r_0 v2 0
+)`
+declare v1_r_minus1 v1_r_0 v1_r_1 v2_r_0
+v1_r_minus1=`carton_commit_add_rev "$v1" -1`
+v1_r_0=`carton_commit_add_rev "$v1" 0`
+v1_r_1=`carton_commit_add_rev "$v1" 1`
+v2_r_0=`carton_commit_add_rev "$v2" 0`
 
 
 # Workaround vim subshell syntax highlighting issue
@@ -89,17 +82,17 @@ ep_suite_begin is_applicable; (
     ep_suite_init
     ep_suite_begin pattern_empty; (
         ep_suite_init
-        ep_test v1_r_minus1 -e0 carton_channel_is_applicable    "repo"  v1_r_minus1
-        ep_test v1_r_1      -e0 carton_channel_is_applicable    "repo"  v1_r_1
-        ep_test v1_r_0      -e0 carton_channel_is_applicable    "repo"  v1_r_0
-        ep_test v2_r_0      -e0 carton_channel_is_applicable    "repo"  v2_r_0
+        ep_test v1_r_minus1 -e0 carton_channel_is_applicable    "repo"  "$v1_r_minus1"
+        ep_test v1_r_1      -e0 carton_channel_is_applicable    "repo"  "$v1_r_1"
+        ep_test v1_r_0      -e0 carton_channel_is_applicable    "repo"  "$v1_r_0"
+        ep_test v2_r_0      -e0 carton_channel_is_applicable    "repo"  "$v2_r_0"
     ); ep_suite_end
     ep_suite_begin pattern_1; (
         ep_suite_init
-        ep_test v1_r_minus1 -e1 carton_channel_is_applicable    "repo/^1"  v1_r_minus1
-        ep_test v1_r_1      -e1 carton_channel_is_applicable    "repo/^1"  v1_r_1
-        ep_test v1_r_0      -e0 carton_channel_is_applicable    "repo/^1"  v1_r_0
-        ep_test v2_r_0      -e1 carton_channel_is_applicable    "repo/^1"  v2_r_0
+        ep_test v1_r_minus1 -e1 carton_channel_is_applicable    "repo/^1"  "$v1_r_minus1"
+        ep_test v1_r_1      -e1 carton_channel_is_applicable    "repo/^1"  "$v1_r_1"
+        ep_test v1_r_0      -e0 carton_channel_is_applicable    "repo/^1"  "$v1_r_0"
+        ep_test v2_r_0      -e1 carton_channel_is_applicable    "repo/^1"  "$v2_r_0"
     ); ep_suite_end
 ); ep_suite_end
 
@@ -111,19 +104,19 @@ ep_suite_begin publish; (
 
         ep_suite_begin exec; (
             ep_suite_init
-            declare -A repo
-            carton_repo_list_add_repo repo repo
+            declare repo
+            carton_repo_list_add_repo repo >/dev/null
             ep_teardown_push carton_repo_list_del_repo repo
-            ep_test do carton_channel_publish repo v1_r_1
+            ep_test do carton_channel_publish repo "$v1_r_1"
         ); ep_suite_end
 
         ep_suite_begin verify; (
             ep_suite_init
-            declare -A repo
-            carton_repo_list_add_repo repo repo
+            declare repo
+            repo=`carton_repo_list_add_repo repo`
             ep_teardown_push carton_repo_list_del_repo repo
-            carton_channel_publish repo v1_r_1
-            ep_test is_published carton_repo_is_published repo v1_r_1
+            carton_channel_publish repo "$v1_r_1"
+            ep_test is_published carton_repo_is_published "$repo" "$v1_r_1"
         ); ep_suite_end
     ); ep_suite_end
 
@@ -132,22 +125,21 @@ ep_suite_begin publish; (
 
         ep_suite_begin exec; (
             ep_suite_init
-            declare -A repo
-            carton_repo_list_add_repo repo repo
+            carton_repo_list_add_repo repo >/dev/null
             ep_teardown_push carton_repo_list_del_repo repo
             ep_test_begin do -e1; (
                 ep_test_init
-                carton_channel_publish repo/^1 v1_r_1 2>/dev/null
+                carton_channel_publish repo/^1 "$v1_r_1" 2>/dev/null
             ); ep_test_end
         ); ep_suite_end
 
         ep_suite_begin verify; (
             ep_suite_init
-            declare -A repo
-            carton_repo_list_add_repo repo repo
+            declare repo
+            repo=`carton_repo_list_add_repo repo`
             ep_teardown_push carton_repo_list_del_repo repo
-            (carton_channel_publish repo/^1 v1_r_1 2>/dev/null) || true
-            ep_test is_not_published -e1 carton_repo_is_published repo v1_r_1
+            (carton_channel_publish repo/^1 "$v1_r_1" 2>/dev/null) || true
+            ep_test is_not_published -e1 carton_repo_is_published "$repo" "$v1_r_1"
         ); ep_suite_end
     ); ep_suite_end
 ); ep_suite_end
@@ -156,34 +148,32 @@ ep_suite_begin withdraw; (
     ep_suite_init
     ep_suite_begin exec; (
         ep_suite_init
-        declare -A repo
-        carton_repo_list_add_repo repo repo
+        carton_repo_list_add_repo repo >/dev/null
         ep_teardown_push carton_repo_list_del_repo repo
-        carton_channel_publish repo v1_r_1
-        ep_test do carton_channel_withdraw repo v1_r_1
+        carton_channel_publish repo "$v1_r_1"
+        ep_test do carton_channel_withdraw repo "$v1_r_1"
     ); ep_suite_end
 
     ep_suite_begin verify; (
         ep_suite_init
-        declare -A repo
-        carton_repo_list_add_repo repo repo
+        declare repo
+        repo=`carton_repo_list_add_repo repo`
         ep_teardown_push carton_repo_list_del_repo repo
-        carton_channel_publish repo v1_r_1
-        carton_channel_withdraw repo v1_r_1
-        ep_test is_not_published -e1 carton_repo_is_published repo v1_r_1
+        carton_channel_publish repo "$v1_r_1"
+        carton_channel_withdraw repo "$v1_r_1"
+        ep_test is_not_published -e1 carton_repo_is_published "$repo" "$v1_r_1"
     ); ep_suite_end
 ); ep_suite_end
 
 ep_suite_begin is_published; (
     ep_suite_init
-    declare -A repo
-    carton_repo_list_add_repo repo repo
+    carton_repo_list_add_repo repo >/dev/null
     ep_teardown_push carton_repo_list_del_repo repo
-    ep_test before_publishing -e1 carton_channel_is_published repo v1_r_1
-    carton_channel_publish repo v1_r_1
-    ep_test after_publishing carton_channel_is_published repo v1_r_1
-    carton_channel_withdraw repo v1_r_1
-    ep_test after_withdrawal -e1 carton_channel_is_published repo v1_r_1
+    ep_test before_publishing -e1 carton_channel_is_published repo "$v1_r_1"
+    carton_channel_publish repo "$v1_r_1"
+    ep_test after_publishing carton_channel_is_published repo "$v1_r_1"
+    carton_channel_withdraw repo "$v1_r_1"
+    ep_test after_withdrawal -e1 carton_channel_is_published repo "$v1_r_1"
 ); ep_suite_end
 
 } # Workaround vim subshell syntax highlighting issue

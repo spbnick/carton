@@ -65,9 +65,9 @@ function test_commit()
 
                 ep_test_begin "do"; (
                     ep_test_init
-                    declare -A rev
-                    carton_rev_init rev "$REV_DIR" \
-                                    "$dist_ver" "$rev_num" "$DIST_DIR"
+                    carton_rev_init "$REV_DIR" \
+                                    "$dist_ver" "$rev_num" "$DIST_DIR" \
+                                        >/dev/null
                 ); ep_test_end
             ); ep_suite_end
 
@@ -77,9 +77,11 @@ function test_commit()
                 mkdir "$REV_DIR"
                 ep_teardown_push rm -Rf "$REV_DIR"
 
+                declare rev_str
+                rev_str=`carton_rev_init "$REV_DIR" \
+                                         "$dist_ver" "$rev_num" "$DIST_DIR"`
                 declare -A rev
-                carton_rev_init rev "$REV_DIR" \
-                                "$dist_ver" "$rev_num" "$DIST_DIR"
+                carton_arr_parse rev <<<"$rev_str"
 
                 ep_test is_built [ "${rev[is_built]}" == "$is_built" ]
                 if $is_built; then
@@ -96,22 +98,20 @@ function test_commit()
 
             mkdir "$REV_DIR"
             ep_teardown_push rm -Rf "$REV_DIR"
-            (
-                declare -A rev
-                carton_rev_init rev "$REV_DIR" \
-                                "$dist_ver" "$rev_num" "$DIST_DIR"
-            )
+            carton_rev_init "$REV_DIR" \
+                            "$dist_ver" "$rev_num" "$DIST_DIR" >/dev/null
 
             ep_test_begin exec; (
                 ep_test_init
-                declare -A rev
-                carton_rev_load rev "$REV_DIR" "$dist_ver" "$rev_num"
+                carton_rev_load "$REV_DIR" "$dist_ver" "$rev_num" >/dev/null
             ); ep_test_end
 
             ep_suite_begin verify; (
                 ep_suite_init
+                declare rev_str
+                rev_str=`carton_rev_load "$REV_DIR" "$dist_ver" "$rev_num"`
                 declare -A rev
-                carton_rev_load rev "$REV_DIR" "$dist_ver" "$rev_num"
+                carton_arr_parse rev <<<"$rev_str"
                 ep_test is_built [ "${rev[is_built]}" == "$is_built" ]
                 if $is_built; then
                     ep_test has_rpm test -f \

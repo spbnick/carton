@@ -21,170 +21,148 @@ if [ -z "${_CARTON_PROJECT_SH+set}" ]; then
 declare _CARTON_PROJECT_SH=
 
 . carton_util.sh
+. carton_branch.sh
 . carton_commit.sh
 
 # Load base project properties from arguments.
-# Args: _dir
+# Args: dir
 declare -r _CARTON_PROJECT_LOAD_BASE='
-    declare -r _dir="$1";   shift
-    carton_assert "[ -d \"\$_dir\" ]"
-    declare -A _project=(
-        [dir]="$_dir"
-        [git_dir]="$_dir/git"
-        [commit_dir]="$_dir/commit"
+    declare -r dir="$1";   shift
+    carton_assert "[ -d \"\$dir\" ]"
+    declare -A project=(
+        [dir]="$dir"
+        [git_dir]="$dir/git"
+        [commit_dir]="$dir/commit"
     )
 '
 
 # Load additional project properties.
 declare -r _CARTON_PROJECT_LOAD_PROPS='
-    _project+=(
-        [tag_glob]=`GIT_DIR="${_project[git_dir]}" \
+    project+=(
+        [tag_glob]=`GIT_DIR="${project[git_dir]}" \
                         git config --get "carton.tag-glob"`
-        [tag_format]=`GIT_DIR="${_project[git_dir]}" \
+        [tag_format]=`GIT_DIR="${project[git_dir]}" \
                         git config --get "carton.tag-format"`
     )
 '
 
-# Initialize a project.
-# Args: _project_var _dir _repo_url [[_tag_glob _tag_format] _update_max_age]
+# Initialize a project and output its string
+# Args: dir repo_url [[tag_glob tag_format] update_max_age]
+# Output: project string
 function carton_project_init()
 {
     declare -r arg_num="$#"
-    carton_assert '[ $arg_num == 3 || $arg_num == 5 || $arg_num == 6 ]'
+    carton_assert '[ $arg_num == 2 || $arg_num == 4 || $arg_num == 5 ]'
 
-    declare -r _project_var="$1";       shift
-    carton_assert 'carton_is_valid_var_name "$_project_var"'
     eval "$_CARTON_PROJECT_LOAD_BASE"
-    declare -r _repo_url="$1";          shift
-    declare -r _tag_glob="${1-v*}";     shift
-    declare -r _tag_format="${1-v%s}";  shift
-    declare -r _update_max_age="${1-@0}";  shift
+    declare -r repo_url="$1";               shift
+    declare -r tag_glob="${1-v*}";          shift
+    declare -r tag_format="${1-v%s}";       shift
+    declare -r update_max_age="${1-@0}";    shift
 
     (
-        export GIT_DIR="${_project[git_dir]}"
+        export GIT_DIR="${project[git_dir]}"
         git init --quiet --bare
-        git config carton.tag-glob "$_tag_glob"
-        git config carton.tag-format "$_tag_format"
-        git config carton.update-max-age "$_update_max_age"
+        git config carton.tag-glob "$tag_glob"
+        git config carton.tag-format "$tag_format"
+        git config carton.update-max-age "$update_max_age"
         git config carton.tag-list ""
-        git remote add origin "$_repo_url"
+        git remote add origin "$repo_url"
         git fetch --quiet
     )
-    mkdir "${_project[commit_dir]}"
+    mkdir "${project[commit_dir]}"
 
     eval "$_CARTON_PROJECT_LOAD_PROPS"
 
-    carton_arr_copy "$_project_var" _project
+    carton_arr_print project
 }
 
-# Load a project.
-# Args: _project_var _dir
+# Load and output a project string.
+# Args: dir
+# Output: project string
 function carton_project_load()
 {
-    declare -r _project_var="$1";   shift
-    carton_assert 'carton_is_valid_var_name "$_project_var"'
     eval "$_CARTON_PROJECT_LOAD_BASE
           $_CARTON_PROJECT_LOAD_PROPS"
-    carton_arr_copy "$_project_var" _project
+    carton_arr_print project
 }
 
 declare -r _CARTON_PROJECT_GET_COMMIT_LOC='
-    declare -r _project_var="$1";   shift
-    carton_assert "carton_is_valid_var_name \"\$_project_var\""
-    declare -r _committish="$1";    shift
+    declare -r project_str="$1";   shift
+    declare -r committish="$1";    shift
 
-    declare -A _project
-    carton_arr_copy _project "$_project_var"
+    declare -A project
+    carton_arr_parse project <<<"$project_str"
 
-    declare _commit_hash
-    _commit_hash=`GIT_DIR="${_project[git_dir]}" \
-                    git rev-parse --verify "$_committish"`
-    declare -r _commit_dir="${_project[commit_dir]}/$_commit_hash"
-'
-
-declare -r _CARTON_PROJECT_GET_COMMIT_PROPS='
-    declare _commit_desc
-    _commit_desc=`git describe --long \
-                               --match="${_project[tag_glob]}" \
-                               "$_commit_hash" | cut -d- -f1-2 ||
-                    { [ $? == 128 ] && echo "-"; } ||
-                        false`
-
-    declare _commit_tag_name
-    _commit_tag_name="${_commit_desc%-*}"
-
-    declare _commit_tag_distance
-    _commit_tag_distance="${_commit_desc#*-}"
+    declare commit_hash
+    commit_hash=`GIT_DIR="${project[git_dir]}" \
+                    git rev-parse --verify "$committish"`
+    declare -r commit_dir="${project[commit_dir]}/$commit_hash"
 '
 
 # Check if a project commit exists.
-# Args: _project_var _committish
+# Args: project_str committish
 function carton_project_has_commit()
 {
     eval "$_CARTON_PROJECT_GET_COMMIT_LOC"
-    [ -d "$_commit_dir" ]
+    [ -d "$commit_dir" ]
 }
 
-# Create a project commit.
-# Args: _commit_var _project_var _committish
+# Create a project commit and output its string.
+# Args: project_str committish
+# Output: commit string
 function carton_project_add_commit()
 {
-    declare -r _commit_var="$1";    shift
-    carton_assert 'carton_is_valid_var_name "$_commit_var"'
     eval "$_CARTON_PROJECT_GET_COMMIT_LOC"
-    carton_assert "! carton_project_has_commit \"\$_project_var\" \
-                                               \"\$_commit_hash\""
-    mkdir "$_commit_dir"
-    carton_commit_init "$_commit_var" "$_commit_dir" < <(
-        GIT_DIR="${_project[git_dir]}" \
-            git archive --format=tar "$_commit_hash"
+    carton_assert "! carton_project_has_commit \"\$project_str\" \
+                                               \"\$commit_hash\""
+    mkdir "$commit_dir"
+    carton_commit_init "$commit_dir" < <(
+        GIT_DIR="${project[git_dir]}" \
+            git archive --format=tar "$commit_hash"
     )
 }
 
-# Get a project commit.
-# Args: _commit_var _project_var _committish
+# Output a project commit string.
+# Args: project_str committish
+# Output: commit string
 function carton_project_get_commit()
 {
-    declare -r _commit_var="$1";    shift
-    carton_assert 'carton_is_valid_var_name "$_commit_var"'
     eval "$_CARTON_PROJECT_GET_COMMIT_LOC"
-    carton_assert "carton_project_has_commit \"\$_project_var\" \
-                                             \"\$_commit_hash\""
-    carton_commit_load "$_commit_var" "$_commit_dir"
+    carton_assert "carton_project_has_commit \"\$project_str\" \
+                                             \"\$commit_hash\""
+    carton_commit_load "$commit_dir"
 }
 
-# Create or get a project commit.
-# Args: _commit_var _project_var _committish
+# Create or get a project commit and output its string.
+# Args: project_str committish
+# Output: commit string
 function carton_project_add_or_get_commit()
 {
-    declare -r _commit_var="$1";    shift
-    carton_assert 'carton_is_valid_var_name "$_commit_var"'
-    declare -r _project_var="$1";   shift
-    carton_assert 'carton_is_valid_var_name "$_project_var"'
-    declare -r _commitish="$1";     shift
+    declare -r project_str="$1";   shift
+    carton_assert 'carton_is_valid_str_name "$project_str"'
+    declare -r commitish="$1";     shift
 
-    if carton_project_commit_exists "$_project_var" "$_committish"; then
-        carton_project_get_commit "$_commit_var" \
-                                  "$_project_var" "$_committish"
+    if carton_project_commit_exists "$project_str" "$committish"; then
+        carton_project_get_commit "$project_str" "$committish"
     else
-        carton_project_add_commit "$_commit_var" \
-                                  "$_project_var" "$_committish"
+        carton_project_add_commit "$project_str" "$committish"
     fi
 }
 
 # Delete a project commit.
-# Args: _project_var _committish
+# Args: project_str committish
 function carton_project_del_commit()
 {
     eval "$_CARTON_PROJECT_GET_COMMIT_LOC"
-    rm -Rf "$_commit_dir"
+    rm -Rf "$commit_dir"
 }
 
 # Determine revision number based on version tag format/commit distribution
 # version and the closest version tag.
 # Args: tag_format ver tag_name tag_distance
 # Output: revision number
-function _carton_project_make_rev_num()
+function carton_project_make_rev_num()
 {
     declare -r tag_format="$1";     shift
     declare -r ver="$1";            shift
@@ -201,167 +179,165 @@ function _carton_project_make_rev_num()
 }
 
 declare -r _CARTON_PROJECT_GET_BRANCH_LOC='
-    declare -r _project_var="$1";   shift
-    carton_assert "carton_is_valid_var_name \"\$_project_var\""
-    declare -r _branch_name="$1";   shift
-    carton_assert "carton_branch_name_is_valid \"\$_branch_name\""
-    declare -A _project
-    carton_arr_copy _project "$_project_var"
+    declare -r project_str="$1";   shift
+    declare -r branch_name="$1";   shift
+    carton_assert "carton_branch_name_is_valid \"\$branch_name\""
+    declare -A project
+    carton_arr_parse project <<<"$project_str"
 '
 
 # Output project branch names, one per line.
-# Args: _project_var
+# Args: project_str
 function carton_project_list_branches()
 {
-    declare -r _project_var="$1";   shift
-    carton_assert 'carton_is_valid_var_name "$_project_var"'
-    declare -A _project
-    carton_arr_copy _project "$_project_var"
+    declare -r project_str="$1";   shift
+    declare -A project
+    carton_arr_parse project <<<"$project_str"
     declare ref
 
-    for ref in `GIT_DIR="${_project[git_dir]}" \
+    for ref in `GIT_DIR="${project[git_dir]}" \
                     git for-each-ref --format='%(refname)' refs/heads/`; do
         echo "${ref#refs/heads/}"
     done
 }
 
 # Check if a project branch exists.
-# Args: _project_var _branch_name
+# Args: project_str branch_name
 function carton_project_has_branch()
 {
     eval "$_CARTON_PROJECT_GET_BRANCH_LOC"
-    GIT_DIR="${_branch[git_dir]}" \
-        git show-ref --quiet --verify "refs/heads/$_branch_name"
+    GIT_DIR="${branch[git_dir]}" \
+        git show-ref --quiet --verify "refs/heads/$branch_name"
 }
 
-# Create a project branch.
-# Args: _project_var _branch_name [_channel_list]
+# Create a project branch and output its string.
+# Args: project_str branch_name [channel_list]
+# Output: branch string
 function carton_project_add_branch()
 {
-    declare -r _branch_var="$1";    shift
-    carton_assert 'carton_is_valid_var_name "$_branch_var"'
     eval "$_CARTON_PROJECT_GET_BRANCH_LOC"
-    carton_assert '! carton_project_has_branch "$_project_var" \
-                                               "$_branch_name"'
-    GIT_DIR="${_project[git_dir]}" \
-        git branch --track "$_branch_name" \
-               "remotes/origin/$_branch_name" >/dev/null
-    carton_branch_init _branch_var "${_project[git_dir]}" "$_branch_name" "$@"
+    carton_assert '! carton_project_has_branch "$project_str" \
+                                               "$branch_name"'
+    GIT_DIR="${project[git_dir]}" \
+        git branch --track "$branch_name" \
+               "remotes/origin/$branch_name" >/dev/null
+    carton_branch_init "${project[git_dir]}" "$branch_name" "$@"
 }
 
-# Get a project branch.
-# Args: _project_var _branch_name
+# Output a project branch string.
+# Args: project_str branch_name
 function carton_project_get_branch()
 {
-    declare -r _branch_var="$1";    shift
-    carton_assert 'carton_is_valid_var_name "$_branch_var"'
     eval "$_CARTON_PROJECT_GET_BRANCH_LOC"
-    carton_assert 'carton_project_has_branch "$_project_var" \
-                                             "$_branch_name"'
-    carton_branch_load _branch_var "${_project[git_dir]}" "$_branch_name"
+    carton_assert 'carton_project_has_branch "$project_str" \
+                                             "$branch_name"'
+    carton_branch_load "${project[git_dir]}" "$branch_name"
 }
 
 # Fetch from remote.
-# Args: _project_var
+# Args: project_str
 function carton_project_fetch()
 {
-    declare -r _project_var="$1";   shift
-    carton_assert 'carton_is_valid_var_name "$_project_var"'
-    declare -A _project
-    carton_arr_copy __project "$_project_var"
-
-    GIT_DIR="${_project[git_dir]}" git fetch --quiet
+    declare -r project_str="$1";   shift
+    declare -A project
+    carton_arr_parse project <<<"$project_str"
+    GIT_DIR="${project[git_dir]}" git fetch --quiet
 }
 
 # Publish new commit revisions.
-# Args: __project_var
+# Args: project_str
 function carton_project_update()
 {
-    declare -r __project_var="$1";   shift
-    carton_assert 'carton_is_valid_var_name "$__project_var"'
-    declare -A __project
-    carton_arr_copy __project "$__project_var"
+    declare -r project_str="$1";   shift
+    carton_assert 'carton_is_valid_str_name "$project_str"'
+    declare -A project
+    carton_arr_parse project <<<"$project_str"
 
     (
-        declare __max_age
-        declare __max_age_stamp
-        declare __tag
-        declare -a __old_tag_list=()
-        declare -A __old_tag_map=()
-        declare -A __tag_rev_map=()
-        declare __commit_hash
-        declare __commit_stamp
-        declare __commit_rev_num
-        declare __branch_name
-        declare __branch_hash
-        declare -A __branch
-        declare __last_tag_name=""
-        declare __last_tag_dist=1
-        declare -A __commit
-        declare -A __rev
-        declare __channel_list
+        declare max_age
+        declare max_age_stamp
+        declare tag
+        declare -a old_tag_list=()
+        declare -A old_tag_map=()
+        declare -A tag_rev_map=()
+        declare commit_hash
+        declare commit_stamp
+        declare commit_rev_num
+        declare branch_name
+        declare branch_hash
+        declare -A branch
+        declare last_tag_name=""
+        declare last_tag_dist=1
+        declare channel_list
 
-        cd "${__project[git_dir]}"
+        cd "${project[git_dir]}"
 
-        __max_age=`git config --get "carton.update-max-age"`
-        __max_age_stamp=`date --date="$__max_age" "+%s"`
+        max_age=`git config --get "carton.update-max-age"`
+        max_age_stamp=`date --date="$max_age" "+%s"`
 
         # Read old tag list into a tag->hash map
-        read -r -a __old_tag_list < <(git config --get "carton.tag-list")
-        if [ "${#__old_tag_list[@]}" != 0 ]; then
-            for __tag in "${__old_tag_list[@]}" do
-                __commit_hash=`git rev-list -n1 "$__tag"`
-                __old_tag_map[$__tag]="$__commit_hash"
+        read -r -a old_tag_list < <(git config --get "carton.tag-list")
+        if [ "${#old_tag_list[@]}" != 0 ]; then
+            for tag in "${old_tag_list[@]}" do
+                commit_hash=`git rev-list -n1 "$tag"`
+                old_tag_map[$tag]="$commit_hash"
             done
         fi
 
         # Map commit hashes to tags
-        while read -r __commit_hash __tag; do
-            __tag_rev_map[$__commit_hash]="${__tag#refs/tags/}"
+        while read -r commit_hash tag; do
+            tag_rev_map[$commit_hash]="${tag#refs/tags/}"
         done < <(
             git for-each-ref --sort=taggerdate \
                              --format='%(objectname) %(refname)' \
-                             "refs/tags/${__project[tag_glob]}"
+                             "refs/tags/${project[tag_glob]}"
         )
 
         # For each branch
-        for __branch_name in `carton_project_list_branches __project`; do
-            carton_project_get_branch __branch __project "$__branch_name"
-            carton_branch_get_channel_list __channel_list __branch
-            __branch_hash=`git rev-list -n1 refs/heads/$__branch_name`
+        for branch_name in `carton_project_list_branches "$branch_str"`; do
+            branch_str=`carton_project_get_branch "$project_str" \
+                                                  "$branch_name"`
+            channel_list=`carton_branch_get_channel_list "$branch_str"`
+            branch_hash=`git rev-list -n1 refs/heads/$branch_name`
 
             # For each commit in remote branch
-            while read -r __commit_stamp __commit_hash; do
+            while read -r commit_stamp commit_hash; do
                 # If the commit has a tag
-                if [ -n "${__tag_rev_map[$__commit_hash]+set}" ]; then
-                    __last_tag_name="${__tag_rev_map[$__commit_hash]}"
-                    __last_tag_distance=0
+                if [ -n "${tag_rev_map[$commit_hash]+set}" ]; then
+                    last_tag_name="${tag_rev_map[$commit_hash]}"
+                    last_tag_distance=0
                 fi
 
                 # If the commit is within update-max-age
-                if ((__commit_stamp >= __max_age_stamp)) &&
+                if ((commit_stamp >= max_age_stamp)) &&
                    # and if the commit is new to our branch
-                   [[ -z "$__branch_hash" ||
+                   [[ -z "$branch_hash" ||
                       # or the commit's last seen tag is new
-                      -z "${__old_tag_map[$__last_tag]+set}" ]]; then
+                      -z "${old_tag_map[$last_tag]+set}" ]]; then
                     # Publish commit revision
-                    carton_project_add_or_get_commit __commit __project \
-                                                     "$__commit_hash"
-                    if "${__commit[is_built]}"; then
-                        __commit_rev_num=`_carton_project_make_rev_num \
-                                            "${__project[tag_format]}" \
-                                            "${__commit[dist_ver]}"
-                                            "$__last_tag_name" \
-                                            "$__last_tag_distance"`
-                        if ! carton_commit_has_rev __commit
-                                                   "$__commit_rev_num"; then
-                            carton_commit_add_rev __rev __commit \
-                                                  "$__commit_rev_num"
-                            if "${__rev[is_built]}"; then
+                    declare commit_str
+                    commit_str=`carton_project_add_or_get_commit \
+                                    "$project_str" "$commit_hash"`
+                    declare -A commit
+                    carton_arr_parse commit <<<"$commit_str"
+                    if "${commit[is_built]}"; then
+                        commit_rev_num=`carton_project_make_rev_num \
+                                            "${project[tag_format]}" \
+                                            "${commit[dist_ver]}"
+                                            "$last_tag_name" \
+                                            "$last_tag_distance"`
+                        if ! carton_commit_has_rev "$commit_str"
+                                                   "$commit_rev_num"; then
+                            declare rev_str
+                            rev_str=`carton_commit_add_rev \
+                                        "$commit_str" "$commit_rev_num"`
+                            declare -A rev
+                            carton_arr_parse rev <<<"$rev_str"
+                            if "${rev[is_built]}"; then
                                 if carton_channel_list_is_applicable \
-                                        __channel_list __rev; then
+                                    "$channel_list" "$rev_str"; then
                                     carton_channel_list_publish \
-                                        __channel_list __rev
+                                        "$channel_list" "$rev_str"
                                 fi
                             fi
                         fi
@@ -369,25 +345,25 @@ function carton_project_update()
                 fi
 
                 # If this is the last commit seen by our branch
-                if [ "$__commit_hash" == "$__branch_hash" ]; then
+                if [ "$commit_hash" == "$branch_hash" ]; then
                     # Consider all following commits as new
-                    __branch_hash=
+                    branch_hash=
                 # else, if this commit is new to our branch
-                elif [ -z "$__branch_hash" ]; then
+                elif [ -z "$branch_hash" ]; then
                     # Advance branch
-                    git update-ref "refs/heads/$__branch_name" \
-                                   "$__commit_hash"
+                    git update-ref "refs/heads/$branch_name" \
+                                   "$commit_hash"
                 fi
 
-                __last_tag_distance=$((__last_tag_distance + 1))
+                last_tag_distance=$((last_tag_distance + 1))
             done < <(
                 git rev-list --reverse --timestamp \
-                             "refs/heads/$__branch_name@{upstream}"
+                             "refs/heads/$branch_name@{upstream}"
             )
         done
 
         # Remember new tag list
-        git config carton.tag-list "${!__tag_rev_map[@]}"
+        git config carton.tag-list "${!tag_rev_map[@]}"
     )
 }
 

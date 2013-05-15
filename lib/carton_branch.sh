@@ -34,72 +34,70 @@ function carton_branch_name_is_valid()
 }
 
 # Load base branch properties.
-# Args: _git_dir _name
+# Args: git_dir name
 declare -r _CARTON_BRANCH_LOAD_BASE='
-    declare -r _git_dir="$1";    shift
-    carton_assert "[ -d \"\$_git_dir\" ]"
-    declare -r _name="$1";   shift
-    carton_assert "carton_branch_name_is_valid \"\$_name\""
+    declare -r git_dir="$1";    shift
+    carton_assert "[ -d \"\$git_dir\" ]"
+    declare -r name="$1";   shift
+    carton_assert "carton_branch_name_is_valid \"\$name\""
 
-    declare -A _branch=(
-        [git_dir]="$_git_dir"
-        [name]="$_name"
+    declare -A branch=(
+        [git_dir]="$git_dir"
+        [name]="$name"
     )
 '
 
-# Initialize a branch.
-# Args: _branch_var _git_dir _name
+# Initialize a branch and output its string.
+# Args: git_dir name
+# Output: branch string
 function carton_branch_init()
 {
-    declare -r _branch_var="$1";    shift
-    carton_assert 'carton_is_valid_var_name "$_branch_var"'
     eval "$_CARTON_BRANCH_LOAD_BASE"
-    GIT_DIR="${_branch[git_dir]}" \
-        git config "branch.${_branch[name]}.carton-channel-list" ""
-    carton_arr_copy "$_branch_var" "_branch"
+    GIT_DIR="${branch[git_dir]}" \
+        git config "branch.${branch[name]}.carton-channel-list" ""
+    carton_arr_print branch
 }
 
 # Load a branch.
-# Args: _branch_var _git_dir _name
+# Args: branch_str git_dir name
 function carton_branch_load()
 {
-    declare -r _branch_var="$1";    shift
-    carton_assert 'carton_is_valid_var_name "$_branch_var"'
     eval "$_CARTON_BRANCH_LOAD_BASE"
-    carton_arr_copy "$_branch_var" "_branch"
+    carton_arr_print branch
 }
 
 # Get a branch channel list.
-# Args: _channel_list_var _branch_var
+# Args: branch_str
+# Output: channel list string
 function carton_branch_get_channel_list()
 {
-    declare -r _branch_var="$1";    shift
-    carton_assert 'carton_is_valid_var_name "$_branch_var"'
-    declare -r _channel_list_var="$1";    shift
-    carton_assert 'carton_is_valid_var_name "$_channel_list_var"'
-    declare -A _branch
-    carton_arr_copy _branch "$_branch_var"
-    carton_channel_list_init "$_channel_list_var" < <(
-        GIT_DIR="${_branch[git_dir]}"
+    declare -r branch_str="$1";    shift
+    carton_assert 'carton_is_valid_str_name "$branch_str"'
+    declare -A branch
+    carton_arr_parse branch <<<"$branch_str"
+    declare channel_list_str
+    channel_list_str=`
+        GIT_DIR="${branch[git_dir]}"
             git config --get \
-                "branch.${_branch[name]}.carton-channel-list"
-    )
+                "branch.${branch[name]}.carton-channel-list"
+    `
+    carton_assert 'carton_channel_list_is_valid "$channel_list_str"'
+    echo -n "$channel_list_str"
 }
 
 # Set a branch channel list.
-# Args: _branch_var _channel_list_var
+# Args: branch_str channel_list_str
 function carton_branch_set_channel_list()
 {
-    declare -r _branch_var="$1";    shift
-    carton_assert 'carton_is_valid_var_name "$_branch_var"'
-    declare -r _channel_list_var="$1";    shift
-    carton_assert 'carton_is_valid_var_name "$_channel_list_var"'
-    declare -A _branch
-    carton_arr_copy _branch "$_branch_var"
+    declare -r branch_str="$1";         shift
+    declare -r channel_list_str="$1";   shift
+    carton_assert 'carton_channel_list_is_valid "$channel_list_str"'
+    declare -A branch
+    carton_arr_parse branch <<<"$branch_str"
 
-    GIT_DIR="${_branch[git_dir]}" \
-        git config "branch.${_branch[name]}.carton-channel-list" \
-                   "`carton_channel_list_print \"\$_channel_list_var\"`"
+    GIT_DIR="${branch[git_dir]}" \
+        git config "branch.${branch[name]}.carton-channel-list" \
+                   "$channel_list_str"
 }
 
 fi # _CARTON_BRANCH_SH

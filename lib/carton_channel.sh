@@ -33,60 +33,59 @@ function carton_channel_is_valid()
 }
 
 # Get channel and revision variable name from arguments.
-# Args: __channel __rev_var
-declare -r _CARTON_CHANNEL_GET_WITH_REV_VAR='
-    declare -r __channel="$1";   shift
-    carton_assert "carton_channel_is_valid \"\$__channel\""
-    declare -r __rev_var="$1";   shift
-    carton_assert "carton_is_valid_var_name \"\$__rev_var\""
-    declare -r __channel_repo_name="${__channel%%/*}"
-    declare -r __channel_ver_regex="${__channel:${#__channel_repo_name}+1}"
+# Args: channel rev_str
+declare -r _CARTON_CHANNEL_GET_WITH_REV_STR='
+    declare -r channel="$1";   shift
+    carton_assert "carton_channel_is_valid \"\$channel\""
+    declare -r rev_str="$1";   shift
+    declare -r channel_repo_name="${channel%%/*}"
+    declare -r channel_ver_regex="${channel:${#channel_repo_name}+1}"
 '
 
 # Check if a revision is suitable for publishing through a channel.
-# Args: __channel __rev_var
+# Args: channel rev_str
 function carton_channel_is_applicable()
 {
-    eval "$_CARTON_CHANNEL_GET_WITH_REV_VAR"
-    declare -A __rev
-    carton_arr_copy __rev "$__rev_var"
-    [[ "$__channel_ver_regex" == "" ||
-       "${__rev[num]}" == 0 && "${__rev[ver]}" =~ $__channel_ver_regex ]]
+    eval "$_CARTON_CHANNEL_GET_WITH_REV_STR"
+    declare -A rev
+    carton_arr_parse rev <<<"$rev_str"
+    [[ "$channel_ver_regex" == "" ||
+       "${rev[num]}" == 0 && "${rev[ver]}" =~ $channel_ver_regex ]]
 }
 
 # Check if a revision is published in a channel.
-# Args: __channel __rev_var
+# Args: channel rev_str
 function carton_channel_is_published()
 {
-    eval "$_CARTON_CHANNEL_GET_WITH_REV_VAR"
-    carton_assert 'carton_channel_is_applicable "$__channel" "$__rev_var"'
-    declare -A __repo
-    carton_repo_list_get_repo __repo "$__channel_repo_name"
-    carton_repo_is_published __repo "$__rev_var"
+    eval "$_CARTON_CHANNEL_GET_WITH_REV_STR"
+    carton_assert 'carton_channel_is_applicable "$channel" "$rev_str"'
+    declare repo_str
+    repo_str=`carton_repo_list_get_repo "$channel_repo_name"`
+    carton_repo_is_published "$repo_str" "$rev_str"
 }
 
 # Publish a revision in a channel.
-# Args: __channel __rev_var
+# Args: channel rev_str
 function carton_channel_publish()
 {
-    eval "$_CARTON_CHANNEL_GET_WITH_REV_VAR"
-    carton_assert 'carton_channel_is_applicable "$__channel" "$__rev_var"'
-    carton_assert '! carton_channel_is_published "$__channel" "$__rev_var"'
-    declare -A __repo
-    carton_repo_list_get_repo __repo "$__channel_repo_name"
-    carton_repo_publish __repo "$__rev_var"
+    eval "$_CARTON_CHANNEL_GET_WITH_REV_STR"
+    carton_assert 'carton_channel_is_applicable "$channel" "$rev_str"'
+    carton_assert '! carton_channel_is_published "$channel" "$rev_str"'
+    declare repo_str
+    repo_str=`carton_repo_list_get_repo "$channel_repo_name"`
+    carton_repo_publish "$repo_str" "$rev_str"
 }
 
 # Withdraw (remove) a revision from a channel.
-# Args: __channel __rev_var
+# Args: channel rev_str
 function carton_channel_withdraw()
 {
-    eval "$_CARTON_CHANNEL_GET_WITH_REV_VAR"
-    carton_assert 'carton_channel_is_applicable "$__channel" "$__rev_var"'
-    carton_assert 'carton_channel_is_published "$__channel" "$__rev_var"'
-    declare -A __repo
-    carton_repo_list_get_repo __repo "$__channel_repo_name"
-    carton_repo_withdraw __repo "$__rev_var"
+    eval "$_CARTON_CHANNEL_GET_WITH_REV_STR"
+    carton_assert 'carton_channel_is_applicable "$channel" "$rev_str"'
+    carton_assert 'carton_channel_is_published "$channel" "$rev_str"'
+    declare repo_str
+    repo_str=`carton_repo_list_get_repo "$channel_repo_name"`
+    carton_repo_withdraw "$repo_str" "$rev_str"
 }
 
 fi # _CARTON_CHANNEL_SH

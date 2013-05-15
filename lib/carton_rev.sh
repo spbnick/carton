@@ -34,51 +34,51 @@ function carton_rev_num_is_valid()
 # Load base revision properties.
 # Args: _dir _num _dist_dir
 declare -r _CARTON_REV_LOAD_BASE='
-    declare -r _dir="$1";   shift
-    carton_assert "[ -d \"\$_dir\" ]"
-    declare -r _ver="$1";   shift
-    declare -r _num="$1";   shift
-    carton_assert "carton_rev_num_is_valid \"\$_num\""
+    declare -r dir="$1";   shift
+    carton_assert "[ -d \"\$dir\" ]"
+    declare -r ver="$1";   shift
+    declare -r num="$1";   shift
+    carton_assert "carton_rev_num_is_valid \"\$num\""
 
-    declare -A _rev=(
-        [dir]="$_dir"
-        [ver]="$_ver"
-        [num]="$_num"
-        [rpm_dir]="$_dir/rpm"
-        [rpm_stamp]="$_dir/rpm.stamp"
-        [rpm_log]="$_dir/rpm.log"
+    declare -A rev=(
+        [dir]="$dir"
+        [ver]="$ver"
+        [num]="$num"
+        [rpm_dir]="$dir/rpm"
+        [rpm_stamp]="$dir/rpm.stamp"
+        [rpm_log]="$dir/rpm.log"
     )
 '
 
 # Load revision packages' properties.
 declare -r _CARTON_REV_LOAD_PKGS='
-    if [ -e "${_rev[rpm_stamp]}" ]; then
-        _rev[is_built]=true
+    if [ -e "${rev[rpm_stamp]}" ]; then
+        rev[is_built]=true
     else
-        _rev[is_built]=false
+        rev[is_built]=false
     fi
 '
 
 # Build RPM packages for a revision.
-# Args: _dist_dir _rpm_dir _rpm_log _rpm_stamp _num
+# Args: dist_dir rpm_dir rpm_log rpm_stamp num
 function _carton_rev_build_rpm()
 {
-    declare -r _dist_dir="$1";  shift
-    declare -r _rpm_dir="$1";   shift
-    declare -r _rpm_log="$1";   shift
-    declare -r _rpm_stamp="$1"; shift
-    declare -r _num="$1";       shift
+    declare -r dist_dir="$1";  shift
+    declare -r rpm_dir="$1";   shift
+    declare -r rpm_log="$1";   shift
+    declare -r rpm_stamp="$1"; shift
+    declare -r num="$1";       shift
 
-    declare -a _rpm_opts=("--define=_topdir $_rpm_dir")
+    declare -a rpm_opts=("--define=_topdir $rpm_dir")
 
-    if ((_num > 0)); then
-        _rpm_opts+=("--define=rev .1.$((_num))")
-    elif ((_num < 0)); then
-        _rpm_opts+=("--define=rev .0.$((-_num))")
+    if ((num > 0)); then
+        rpm_opts+=("--define=rev .1.$((num))")
+    elif ((num < 0)); then
+        rpm_opts+=("--define=rev .0.$((-num))")
     fi
 
     (
-        declare _status
+        declare status
 
         echo -n "Start: "
         date --rfc-2822
@@ -86,63 +86,61 @@ function _carton_rev_build_rpm()
         (
             set -o errexit -o xtrace
 
-            declare _tarball
-            declare _spec
+            declare tarball
+            declare spec
 
             # Check distribution has tarballs
-            [ -f "$_dist_dir/"*.tar.gz ]
+            [ -f "$dist_dir/"*.tar.gz ]
             # Check distribution has spec files
-            [ -f "$_dist_dir/"*.spec ]
+            [ -f "$dist_dir/"*.spec ]
 
-            mkdir "$_rpm_dir"{,/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}}
+            mkdir "$rpm_dir"{,/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}}
 
-            for _tarball in "$_dist_dir/"*.tar.gz; do
-                ln -s "$_tarball" "$_rpm_dir/SOURCES/"
+            for tarball in "$dist_dir/"*.tar.gz; do
+                ln -s "$tarball" "$rpm_dir/SOURCES/"
             done
-            for _spec in "$_dist_dir/"*.spec; do
-                ln -s "$_spec" "$_rpm_dir/SPECS/"
+            for spec in "$dist_dir/"*.spec; do
+                ln -s "$spec" "$rpm_dir/SPECS/"
             done
-            for _spec in "$_rpm_dir/SPECS/"*.spec; do
-                rpmbuild "${_rpm_opts[@]}" -ba "$_spec"
+            for spec in "$rpm_dir/SPECS/"*.spec; do
+                rpmbuild "${rpm_opts[@]}" -ba "$spec"
             done
         )
-        _status="$?"
+        status="$?"
         set -o errexit
-        if [ "$_status" == 0 ]; then
-            touch "$_rpm_stamp"
+        if [ "$status" == 0 ]; then
+            touch "$rpm_stamp"
         fi
         echo -n "End: "
         date --rfc-2822
-    ) > "$_rpm_log" 2>&1
+    ) > "$rpm_log" 2>&1
 }
 
-# Initialize a revision.
-# Args: _rev_var _dir _ver _num _dist_dir
+# Initialize a revision and output its string.
+# Args: dir ver num dist_dir
+# Output: revision string
 function carton_rev_init()
 {
-    declare -r _rev_var="$1";    shift
-    carton_assert 'carton_is_valid_var_name "$_rev_var"'
     eval "$_CARTON_REV_LOAD_BASE"
-    declare -r _dist_dir="$1";   shift
-    carton_assert "[ -d \"\$_dist_dir\" ]"
-    _carton_rev_build_rpm "$_dist_dir" \
-                          "${_rev[rpm_dir]}" \
-                          "${_rev[rpm_log]}" \
-                          "${_rev[rpm_stamp]}" \
-                          "${_rev[num]}"
+    declare -r dist_dir="$1";   shift
+    carton_assert "[ -d \"\$dist_dir\" ]"
+    _carton_rev_build_rpm "$dist_dir" \
+                          "${rev[rpm_dir]}" \
+                          "${rev[rpm_log]}" \
+                          "${rev[rpm_stamp]}" \
+                          "${rev[num]}"
     eval "$_CARTON_REV_LOAD_PKGS"
-    carton_arr_copy "$_rev_var" _rev
+    carton_arr_print rev
 }
 
-# Load a revision.
-# Args: _rev_var _dir _ver _num
+# Load and output a revision string.
+# Args: dir ver num
+# Output: revision string
 function carton_rev_load()
 {
-    declare -r _rev_var="$1";    shift
-    carton_assert 'carton_is_valid_var_name "$_rev_var"'
     eval "$_CARTON_REV_LOAD_BASE
           $_CARTON_REV_LOAD_PKGS"
-    carton_arr_copy "$_rev_var" _rev
+    carton_arr_print rev
 }
 
 fi # _CARTON_REV_SH

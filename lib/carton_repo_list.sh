@@ -41,52 +41,50 @@ function carton_repo_list_list_repos()
 }
 
 # Get repo location arguments.
-# Args: _repo_name
+# Args: repo_name
 declare -r _CARTON_REPO_LIST_GET_REPO_LOC='
-    declare -r _repo_name="$1";   shift
-    carton_assert "carton_repo_list_is_valid_name \"\$_repo_name\""
+    declare -r repo_name="$1";   shift
+    carton_assert "carton_repo_list_is_valid_name \"\$repo_name\""
     carton_assert "[ -d \"\$CARTON_REPO_LIST_DIR\" ]"
-    declare -r _repo_dir="$CARTON_REPO_LIST_DIR/$_repo_name"
+    declare -r repo_dir="$CARTON_REPO_LIST_DIR/$repo_name"
 '
 
 # Check if a repository exists.
-# Args: _repo_name
+# Args: repo_name
 function carton_repo_list_has_repo()
 {
     eval "$_CARTON_REPO_LIST_GET_REPO_LOC"
-    [ -e "$_repo_dir" ]
+    [ -e "$repo_dir" ]
 }
 
-# Create and get a repository.
-# Args: _repo_var _repo_name
+# Add a new repository to the list and output its string.
+# Args: repo_name
+# Output: repo string
 function carton_repo_list_add_repo()
 {
-    declare -r _repo_var="$1";  shift
-    carton_assert "carton_is_valid_var_name \"\$_repo_var\""
     eval "$_CARTON_REPO_LIST_GET_REPO_LOC"
-    carton_assert "! carton_repo_list_has_repo \"\$_repo_name\""
-    mkdir "$_repo_dir"
-    carton_repo_init "$_repo_var" "$_repo_dir" "$@"
+    carton_assert "! carton_repo_list_has_repo \"\$repo_name\""
+    mkdir "$repo_dir"
+    carton_repo_init "$repo_dir" "$@"
 }
 
-# Get a repository.
-# Args: _repo_var _repo_name
+# Get a repository string.
+# Args: repo_name
+# Output: repo string
 function carton_repo_list_get_repo()
 {
-    declare -r _repo_var="$1";  shift
-    carton_assert "carton_is_valid_var_name \"\$_repo_var\""
     eval "$_CARTON_REPO_LIST_GET_REPO_LOC"
-    carton_assert "carton_repo_list_has_repo \"\$_repo_name\""
-    carton_repo_load "$_repo_var" "$_repo_dir"
+    carton_assert "carton_repo_list_has_repo \"\$repo_name\""
+    carton_repo_load "$repo_dir"
 }
 
 # Delete a repository.
-# Args: _repo_name
+# Args: repo_name
 function carton_repo_list_del_repo()
 {
     eval "$_CARTON_REPO_LIST_GET_REPO_LOC"
-    carton_assert "carton_repo_list_has_repo \"\$_repo_name\""
-    rm -Rf -- "$_repo_dir"
+    carton_assert "carton_repo_list_has_repo \"\$repo_name\""
+    rm -Rf -- "$repo_dir"
 }
 
 fi # _CARTON_REPO_LIST_SH

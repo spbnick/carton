@@ -41,52 +41,49 @@ function carton_project_list_list_projects()
 }
 
 # Get project location arguments.
-# Args: _project_name
+# Args: project_name
 declare -r _CARTON_PROJECT_LIST_GET_PROJECT_LOC='
-    declare -r _project_name="$1";   shift
-    carton_assert "carton_project_list_is_valid_name \"\$_project_name\""
+    declare -r project_name="$1";   shift
+    carton_assert "carton_project_list_is_valid_name \"\$project_name\""
     carton_assert "[ -d \"\$CARTON_PROJECT_LIST_DIR\" ]"
-    declare -r _project_dir="$CARTON_PROJECT_LIST_DIR/$_project_name"
+    declare -r project_dir="$CARTON_PROJECT_LIST_DIR/$project_name"
 '
 
 # Check if a project exists.
-# Args: _project_name
+# Args: project_name
 function carton_project_list_has_project()
 {
     eval "$_CARTON_PROJECT_LIST_GET_PROJECT_LOC"
-    [ -e "$_project_dir" ]
+    [ -e "$project_dir" ]
 }
 
-# Create and get a project.
-# Args: _project_var _project_name _dir _repo_url [_tag_glob _tag_format]
+# Add a new project to the list and output its string.
+# Args: project_name dir repo_url [[tag_glob tag_format] update_max_age]
+# Output: project string
 function carton_project_list_add_project()
 {
-    declare -r _project_var
-    carton_assert "carton_is_valid_var_name \"\$_project_var\""
     eval "$_CARTON_PROJECT_LIST_GET_PROJECT_LOC"
-    carton_assert "! carton_project_list_has_project \"\$_project_name\""
-    mkdir "$_project_dir"
-    carton_project_init "$_project_var" "$_project_dir" "$@"
+    carton_assert "! carton_project_list_has_project \"\$project_name\""
+    mkdir "$project_dir"
+    carton_project_init "$project_dir" "$@"
 }
 
-# Get a project.
-# Args: _project_var _project_name
+# Load and output a project string.
+# Args: project_name
 function carton_project_list_get_project()
 {
-    declare -r _project_var
-    carton_assert "carton_is_valid_var_name \"\$_project_var\""
     eval "$_CARTON_PROJECT_LIST_GET_PROJECT_LOC"
-    carton_assert "carton_project_list_has_project \"\$_project_name\""
-    carton_project_load "$_project_var" "$_project_dir"
+    carton_assert "carton_project_list_has_project \"\$project_name\""
+    carton_project_load "$project_dir"
 }
 
 # Delete a project.
-# Args: _project_name
+# Args: project_name
 function carton_project_list_del_project()
 {
     eval "$_CARTON_PROJECT_LIST_GET_PROJECT_LOC"
-    carton_assert 'carton_project_list_has "$_project_name"'
-    rm -Rf -- "$_project_dir"
+    carton_assert 'carton_project_list_has "$project_name"'
+    rm -Rf -- "$project_dir"
 }
 
 fi # _CARTON_PROJECT_LIST_SH

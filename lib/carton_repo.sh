@@ -23,64 +23,60 @@ declare _CARTON_REPO_SH=
 . carton_util.sh
 
 # Load base repository parameters
-# Args: _dir
+# Args: dir
 declare -r _CARTON_REPO_LOAD_BASE='
-    declare -r _dir="$1";       shift
-    carton_assert "[ -d \"\$_dir\" ]"
+    declare -r dir="$1";       shift
+    carton_assert "[ -d \"\$dir\" ]"
 
-    declare -A _repo=(
-        [dir]="$_dir"
-        [rpm_dir]="$_dir/rpm"
+    declare -A repo=(
+        [dir]="$dir"
+        [rpm_dir]="$dir/rpm"
     )
 '
 
-# Initialize a repo.
-# Args: _repo_var _dir
+# Initialize a repo and output its string.
+# Args: dir
+# Output: repo string
 function carton_repo_init()
 {
-    declare -r _repo_var="$1";  shift
-    carton_assert 'carton_is_valid_var_name "$_repo_var"'
     eval "$_CARTON_REPO_LOAD_BASE"
-    mkdir "${_repo[rpm_dir]}"
-    createrepo --quiet "${_repo[rpm_dir]}"
-    carton_arr_copy "$_repo_var" _repo
+    mkdir "${repo[rpm_dir]}"
+    createrepo --quiet "${repo[rpm_dir]}"
+    carton_arr_print repo
 }
 
-# Load a repo.
-# Args: _repo_var _dir
+# Load and output a repo string.
+# Args: dir
+# Output: repo string
 function carton_repo_load()
 {
-    declare -r _repo_var="$1";  shift
-    carton_assert 'carton_is_valid_var_name "$_repo_var"'
     eval "$_CARTON_REPO_LOAD_BASE"
-    carton_arr_copy "$_repo_var" _repo
+    carton_arr_print repo
 }
 
 # Get repo/revision pair from arguments
-# Args: _repo_var _rev_var
+# Args: repo_str rev_str
 declare -r _CARTON_REPO_GET_REPO_AND_REV='
-    declare -r _repo_var="$1"; shift
-    carton_assert "carton_is_valid_var_name \"\$_repo_var\""
-    declare -r _rev_var="$1"; shift
-    carton_assert "carton_is_valid_var_name \"\$_rev_var\""
-    declare -A _repo
-    carton_arr_copy "_repo" "$_repo_var"
-    declare -A _rev
-    carton_arr_copy "_rev" "$_rev_var"
+    declare -r repo_str="$1"; shift
+    declare -r rev_str="$1"; shift
+    declare -A repo
+    carton_arr_parse "repo" <<<"$repo_str"
+    declare -A rev
+    carton_arr_parse "rev" <<<"$rev_str"
 '
 
 # Check if a commit revision is published in a repo.
-# Args: _repo_var _rev_var
+# Args: repo_str rev_str
 function carton_repo_is_published()
 {
     eval "$_CARTON_REPO_GET_REPO_AND_REV"
     declare f
     while read -r f; do
-        if ! [ -e "${_repo[rpm_dir]}/$f" ]; then
+        if ! [ -e "${repo[rpm_dir]}/$f" ]; then
             return 1
         fi
     done < <(
-        find "${_rev[rpm_dir]}" -name "*.rpm" -printf '%f\n'
+        find "${rev[rpm_dir]}" -name "*.rpm" -printf '%f\n'
     )
     return 0
 }
@@ -90,29 +86,29 @@ function carton_repo_is_published()
 #
 
 # Publish a commit revision in a repo.
-# Args: _repo_var _rev_var
+# Args: repo_str rev_str
 function carton_repo_publish()
 {
     eval "$_CARTON_REPO_GET_REPO_AND_REV"
-    carton_assert '! carton_repo_is_published "$_repo_var" "$_rev_var"'
-    find "${_rev[rpm_dir]}" -name "*.rpm" -print0 |
-        xargs -0 cp -t "${_repo[rpm_dir]}"
-    createrepo --quiet --update "${_repo[rpm_dir]}"
+    carton_assert '! carton_repo_is_published "$repo_str" "$rev_str"'
+    find "${rev[rpm_dir]}" -name "*.rpm" -print0 |
+        xargs -0 cp -t "${repo[rpm_dir]}"
+    createrepo --quiet --update "${repo[rpm_dir]}"
 }
 
 # Withdraw (remove) a commit revision from a repo.
-# Args: _repo_var _rev_var
+# Args: repo_str rev_str
 function carton_repo_withdraw()
 {
     eval "$_CARTON_REPO_GET_REPO_AND_REV"
-    carton_assert 'carton_repo_is_published "$_repo_var" "$_rev_var"'
+    carton_assert 'carton_repo_is_published "$repo_str" "$rev_str"'
     declare f
     while read -r f; do
-        rm "${_repo[rpm_dir]}/$f"
+        rm "${repo[rpm_dir]}/$f"
     done < <(
-        find "${_rev[rpm_dir]}" -name "*.rpm" -printf '%f\n'
+        find "${rev[rpm_dir]}" -name "*.rpm" -printf '%f\n'
     )
-    createrepo --quiet --update "${_repo[rpm_dir]}"
+    createrepo --quiet --update "${repo[rpm_dir]}"
 }
 
 fi # _CARTON_REPO_SH

@@ -30,9 +30,13 @@ declare GIT_DIR="$WORK_DIR/.git"
 declare -r COMMIT_DIR="$DATA_DIR/commit"
 
 # Run tests for a commit revision management
-# Upvalues: commit
+# Args: commit_str
 function test_rev()
 {
+    declare -r commit_str="$1"; shift
+    declare -A commit
+    carton_arr_parse commit <<<"$commit_str"
+
     ep_suite_begin rev; (
         ep_suite_init
 
@@ -42,15 +46,13 @@ function test_rev()
             ep_suite_begin exec; (
                 ep_suite_init
                 ep_teardown_push rm -Rf "${commit[rev_dir]}/1"
-                declare -A rev
-                ep_test do carton_commit_add_rev rev commit 1
+                ep_test do carton_commit_add_rev "$commit_str" 1 >/dev/null
             ); ep_suite_end
 
             ep_suite_begin verify; (
                 ep_suite_init
                 ep_teardown_push rm -Rf "${commit[rev_dir]}/1"
-                declare -A rev
-                carton_commit_add_rev rev commit 1
+                carton_commit_add_rev "$commit_str" 1 >/dev/null
                 ep_test exists test -d "${commit[rev_dir]}/1"
             ); ep_suite_end
         ); ep_suite_end
@@ -61,17 +63,15 @@ function test_rev()
             ep_suite_begin exec; (
                 ep_suite_init
                 ep_teardown_push rm -Rf "${commit[rev_dir]}/1"
-                declare -A rev
-                carton_commit_add_rev rev commit 1
-                ep_test do carton_commit_del_rev commit 1
+                carton_commit_add_rev "$commit_str" 1 >/dev/null
+                ep_test do carton_commit_del_rev "$commit_str" 1
             ); ep_suite_end
 
             ep_suite_begin verify; (
                 ep_suite_init
                 ep_teardown_push rm -Rf "${commit[rev_dir]}/1"
-                declare -A rev
-                carton_commit_add_rev rev commit 1
-                carton_commit_del_rev commit 1
+                carton_commit_add_rev "$commit_str" 1 >/dev/null
+                carton_commit_del_rev "$commit_str" 1
                 ep_test doesnt_exist \
                         eval "! test -d \"\${commit[rev_dir]}/1\""
             ); ep_suite_end
@@ -98,14 +98,12 @@ function test_commit()
                 mkdir "$COMMIT_DIR"
                 ep_teardown_push rm -Rf "$COMMIT_DIR"
 
-                declare -A commit
-
-                ep_test_begin "do"; (
+                ep_test_begin do; (
                     ep_test_init
-                    carton_commit_init commit "$COMMIT_DIR" < <(
+                    carton_commit_init "$COMMIT_DIR" < <(
                         GIT_DIR="$GIT_DIR" git archive --format=tar \
                                                        "$committish"
-                    )
+                    ) >/dev/null
                 ); ep_test_end
             ); ep_suite_end
 
@@ -115,14 +113,18 @@ function test_commit()
                 mkdir "$COMMIT_DIR"
                 ep_teardown_push rm -Rf "$COMMIT_DIR"
 
+                declare commit_str
+                commit_str=`
+                    carton_commit_init "$COMMIT_DIR" < <(
+                        GIT_DIR="$GIT_DIR" git archive --format=tar \
+                                                       "$committish"
+                    )`
                 declare -A commit
-                carton_commit_init commit "$COMMIT_DIR" < <(
-                    GIT_DIR="$GIT_DIR" git archive --format=tar "$committish"
-                )
+                carton_arr_parse commit <<<"$commit_str"
                 ep_test is_built [ "${commit[is_built]}" == "$is_built" ]
                 if $is_built; then
                     ep_test dist_ver [ "${commit[dist_ver]}" == "$dist_ver" ]
-                    test_rev
+                    test_rev "$commit_str"
                 fi
             ); ep_suite_end
         ); ep_suite_end
@@ -132,27 +134,25 @@ function test_commit()
 
             mkdir "$COMMIT_DIR"
             ep_teardown_push rm -Rf "$COMMIT_DIR"
-            (
-                declare -A commit
-                carton_commit_init commit "$COMMIT_DIR" < <(
-                    GIT_DIR="$GIT_DIR" git archive --format=tar "$committish"
-                )
-            )
+            carton_commit_init "$COMMIT_DIR" < <(
+                GIT_DIR="$GIT_DIR" git archive --format=tar "$committish"
+            ) >/dev/null
 
             ep_test_begin exec; (
                 ep_test_init
-                declare -A commit
-                carton_commit_load commit "$COMMIT_DIR"
+                carton_commit_load "$COMMIT_DIR" >/dev/null
             ); ep_test_end
 
             ep_suite_begin verify; (
                 ep_suite_init
+                declare commit_str
+                commit_str=`carton_commit_load "$COMMIT_DIR"`
                 declare -A commit
-                carton_commit_load commit "$COMMIT_DIR"
+                carton_arr_parse commit <<<"$commit_str"
                 ep_test is_built [ "${commit[is_built]}" == "$is_built" ]
                 if $is_built; then
                     ep_test dist_ver [ "${commit[dist_ver]}" == "$dist_ver" ]
-                    test_rev
+                    test_rev "$commit_str"
                 fi
             ); ep_suite_end
         ); ep_suite_end
