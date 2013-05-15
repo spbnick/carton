@@ -1,1 +1,9 @@
 Validate variable name prefixes as they're passed to functions.
+Initialize new installation with carton_init
+Use single quotes around assertions in non-evaled code everywhere.
+Put actual simple descriptions at the start of modules instead of just object
+names.
+Consider naming object "strings" "handles" or something similar instead.
+Put only unchangeable, identification data in the "handles".
+Consider not accessing "handle" contents directly outside the module, but
+using accessor functions instead.
