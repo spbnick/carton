@@ -34,7 +34,7 @@ function carton_project_list_is_valid_name()
 }
 
 # Output the list of project names, one per line.
-function carton_project_list_list()
+function carton_project_list_list_projects()
 {
     carton_assert "[ -d \"\$CARTON_PROJECT_LIST_DIR\" ]"
     ls -1 "$CARTON_PROJECT_LIST_DIR"
@@ -51,7 +51,7 @@ declare -r _CARTON_PROJECT_LIST_GET_PROJECT_LOC='
 
 # Check if a project exists.
 # Args: _project_name
-function carton_project_list_has()
+function carton_project_list_has_project()
 {
     eval "$_CARTON_PROJECT_LIST_GET_PROJECT_LOC"
     [ -e "$_project_dir" ]
@@ -59,7 +59,7 @@ function carton_project_list_has()
 
 # Create and get a project.
 # Args: _project_var _project_name _dir _repo_url [_tag_glob _tag_format]
-function carton_project_list_add()
+function carton_project_list_add_project()
 {
     declare -r _project_var
     carton_assert "carton_is_valid_var_name \"\$_project_var\""
@@ -71,7 +71,7 @@ function carton_project_list_add()
 
 # Get a project.
 # Args: _project_var _project_name
-function carton_project_list_get()
+function carton_project_list_get_project()
 {
     declare -r _project_var
     carton_assert "carton_is_valid_var_name \"\$_project_var\""
@@ -82,7 +82,7 @@ function carton_project_list_get()
 
 # Delete a project.
 # Args: _project_name
-function carton_project_list_del()
+function carton_project_list_del_project()
 {
     eval "$_CARTON_PROJECT_LIST_GET_PROJECT_LOC"
     carton_assert 'carton_project_list_has "$_project_name"'

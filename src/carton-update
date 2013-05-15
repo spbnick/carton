@@ -43,12 +43,12 @@ if (( $# > 0 )); then
     fi
     project_name_list="$project_name"
 else
-    project_name_list=`carton_project_list_list`
+    project_name_list=`carton_project_list_list_projects`
 fi
 
 for while read -r project_name; do
     declare -A project
-    carton_project_list_get project "$project_name"
+    carton_project_list_get_project project "$project_name"
     carton_project_fetch project
     carton_project_update project
 done <<<"$project_name_list"
