@@ -31,11 +31,13 @@ function carton_channel_list_is_valid()
     declare -a channel_list
     declare channel
     read -r -a channel_list <<<"$channel_list_str"
-    for channel in "${channel_list[@]}"; do
-        if ! carton_channel_is_valid "$channel"; then
-            return 1
-        fi
-    done
+    if [ "${#channel_list[@]}" != 0 ]; then
+        for channel in "${channel_list[@]}"; do
+            if ! carton_channel_is_valid "$channel"; then
+                return 1
+            fi
+        done
+    fi
     return 0
 }
 
@@ -55,11 +57,13 @@ function carton_channel_list_is_applicable()
 {
     eval "$_CARTON_CHANNEL_LIST_GET_WITH_REV_STR"
     declare channel
-    for channel in "${channel_list[@]}"; do
-        if carton_channel_is_applicable channel "$rev_str"; then
-            return 0
-        fi
-    done
+    if [ "${#channel_list[@]}" != 0 ]; then
+        for channel in "${channel_list[@]}"; do
+            if carton_channel_is_applicable "$channel" "$rev_str"; then
+                return 0
+            fi
+        done
+    fi
     return 1
 }
 
@@ -71,12 +75,14 @@ function carton_channel_list_is_published()
     carton_assert 'carton_channel_list_is_applicable "$channel_list_str" \
                                                      "$rev_str"'
     declare channel
-    for channel in "${channel_list[@]}"; do
-        if carton_channel_is_applicable "$channel" "$rev_str" &&
-           ! carton_channel_is_published "$channel" "$rev_str"; then
-            return 1
-        fi
-    done
+    if [ "${#channel_list[@]}" != 0 ]; then
+        for channel in "${channel_list[@]}"; do
+            if carton_channel_is_applicable "$channel" "$rev_str" &&
+               ! carton_channel_is_published "$channel" "$rev_str"; then
+                return 1
+            fi
+        done
+    fi
     return 0
 }
 
@@ -90,11 +96,13 @@ function carton_channel_list_publish()
     carton_assert '! carton_channel_list_is_published "$channel_list_str" \
                                                       "$rev_str"'
     declare channel
-    for channel in "${channel_list[@]}"; do
-        if carton_channel_is_applicable "$channel" "$rev_str"; then
-           carton_channel_publish "$channel" "$rev_str"
-        fi
-    done
+    if [ "${#channel_list[@]}" != 0 ]; then
+        for channel in "${channel_list[@]}"; do
+            if carton_channel_is_applicable "$channel" "$rev_str"; then
+               carton_channel_publish "$channel" "$rev_str"
+            fi
+        done
+    fi
 }
 
 # Withdraw (remove) a revision from a channel list.
@@ -107,11 +115,13 @@ function carton_channel_list_withdraw()
     carton_assert 'carton_channel_list_is_published "$channel_list_str" \
                                                     "$rev_str"'
     declare channel
-    for channel in "${channel_list[@]}"; do
-        if carton_channel_is_applicable "$channel" "$rev_str"; then
-           carton_channel_withdraw "$channel" "$rev_str"
-        fi
-    done
+    if [ "${#channel_list[@]}" != 0 ]; then
+        for channel in "${channel_list[@]}"; do
+            if carton_channel_is_applicable "$channel" "$rev_str"; then
+               carton_channel_withdraw "$channel" "$rev_str"
+            fi
+        done
+    fi
 }
 
 fi # _CARTON_CHANNEL_LIST_SH
