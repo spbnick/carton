@@ -62,7 +62,7 @@ function carton_assert()
     eval "$@" || carton_abort "Assertion failed: $@"
 }
 
-# Check if a string is a valid filesystem name.
+# Check if a string is suitable for use in a data sub-directory path.
 # Args: str
 function carton_is_valid_fs_name()
 {
