@@ -1,0 +1,147 @@
+#!/bin/bash
+#
+# carton_branch.sh tests
+#
+# Copyright (c) 2013 Red Hat, Inc. All rights reserved.
+#
+# This copyrighted material is made available to anyone wishing
+# to use, modify, copy, or redistribute it subject to the terms
+# and conditions of the GNU General Public License version 2.
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public
+# License along with this program; if not, write to the Free
+# Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
+
+eval "`ep_env && carton-env || echo false`"
+. test_git.sh
+. ep.sh
+ep_suite_init "$@"
+
+declare -r DATA_DIR=`mktemp --tmpdir -d carton-test.XXXXXXXX`
+ep_teardown_push rm -Rf "$DATA_DIR"
+declare -r WORK_DIR="$DATA_DIR/work"
+test_git_make "$WORK_DIR"
+declare GIT_DIR="$WORK_DIR/.git"
+cd "$WORK_DIR"
+
+# Workaround vim subshell syntax highlighting issue
+{
+
+ep_test_begin source; (
+    ep_test_init
+    . carton_branch.sh
+); ep_test_end
+
+. carton_branch.sh
+
+ep_suite_begin init; (
+    ep_suite_init
+    ep_suite_begin exec; (
+        ep_suite_init
+        git branch test master
+        ep_teardown_push eval "git branch -d test >/dev/null"
+        ep_test without_channel_list carton_branch_init \
+                                        "$GIT_DIR" test >/dev/null
+        ep_test with_channel_list carton_branch_init \
+                                        "$GIT_DIR" test "repo1 repo2" \
+                                        >/dev/null
+    ); ep_suite_end
+    ep_suite_begin verify; (
+        ep_suite_init
+
+        ep_suite_begin without_channel_list; (
+            ep_suite_init
+            git branch test master
+            ep_teardown_push eval "git branch -d test >/dev/null"
+            carton_branch_init "$GIT_DIR" test >/dev/null
+            declare channel_list
+            channel_list=`git config --get "branch.test.carton-channel-list"`
+            ep_test channel_list test "$channel_list" == ""
+        ); ep_suite_end
+
+        ep_suite_begin with_channel_list; (
+            ep_suite_init
+            git branch test master
+            ep_teardown_push eval "git branch -d test >/dev/null"
+            carton_branch_init "$GIT_DIR" test "repo1 repo2" >/dev/null
+            declare channel_list
+            channel_list=`git config --get "branch.test.carton-channel-list"`
+            ep_test channel_list test "$channel_list" == "repo1 repo2"
+        ); ep_suite_end
+    ); ep_suite_end
+); ep_suite_end
+
+ep_suite_begin get_channel_list; (
+    ep_suite_init
+    ep_suite_begin exec; (
+        ep_suite_init
+        git branch test master
+        ep_teardown_push eval "git branch -d test >/dev/null"
+        declare branch
+        branch=`carton_branch_init "$GIT_DIR" test "repo1 repo2"`
+        ep_test do carton_branch_get_channel_list "$branch" >/dev/null
+    ); ep_suite_end
+    ep_suite_begin verify; (
+        ep_suite_init
+        git branch test master
+        ep_teardown_push eval "git branch -d test >/dev/null"
+        declare branch
+        branch=`carton_branch_init "$GIT_DIR" test "repo1 repo2"`
+        declare channel_list
+        channel_list=`carton_branch_get_channel_list "$branch"`
+        ep_test match test "$channel_list" == "repo1 repo2"
+    ); ep_suite_end
+); ep_suite_end
+
+ep_suite_begin set_channel_list; (
+    ep_suite_init
+    ep_suite_begin exec; (
+        ep_suite_init
+        git branch test master
+        ep_teardown_push eval "git branch -d test >/dev/null"
+        declare branch
+        branch=`carton_branch_init "$GIT_DIR" test`
+        ep_test do carton_branch_set_channel_list "$branch" "repo1 repo2"
+    ); ep_suite_end
+    ep_suite_begin verify; (
+        ep_suite_init
+        git branch test master
+        ep_teardown_push eval "git branch -d test >/dev/null"
+        declare branch
+        branch=`carton_branch_init "$GIT_DIR" test`
+        carton_branch_set_channel_list "$branch" "repo1 repo2"
+        declare channel_list
+        channel_list=`carton_branch_get_channel_list "$branch"`
+        ep_test match test "$channel_list" == "repo1 repo2"
+    ); ep_suite_end
+); ep_suite_end
+
+ep_suite_begin load; (
+    ep_suite_init
+    ep_suite_begin exec; (
+        ep_suite_init
+        git branch test master
+        ep_teardown_push eval "git branch -d test >/dev/null"
+        carton_branch_init "$GIT_DIR" test "repo1 repo2" >/dev/null
+        ep_test do carton_branch_load "$GIT_DIR" test >/dev/null
+    ); ep_suite_end
+    ep_suite_begin verify; (
+        ep_suite_init
+        git branch test master
+        ep_teardown_push eval "git branch -d test >/dev/null"
+        carton_branch_init "$GIT_DIR" test "repo1 repo2" >/dev/null
+        declare branch
+        branch=`carton_branch_load "$GIT_DIR" test`
+        declare channel_list
+        channel_list=`carton_branch_get_channel_list "$branch"`
+        ep_test channel_list test "$channel_list" == "repo1 repo2"
+    ); ep_suite_end
+); ep_suite_end
+
+} # Workaround vim subshell syntax highlighting issue
