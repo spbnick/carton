@@ -68,6 +68,17 @@ function carton_repo_list_add_repo()
     carton_repo_init "$repo_dir" "$@"
 }
 
+# Add a list of new repositories to the list.
+# Args: repo_name...
+function carton_repo_list_add_repo_list()
+{
+    if [ $# != 0 ]; then
+        for repo_name in "$@"; do
+            carton_repo_list_add_repo "$repo_name" >/dev/null
+        done
+    fi
+}
+
 # Get a repository string.
 # Args: repo_name
 # Output: repo string
@@ -85,6 +96,17 @@ function carton_repo_list_del_repo()
     eval "$_CARTON_REPO_LIST_GET_REPO_LOC"
     carton_assert "carton_repo_list_has_repo \"\$repo_name\""
     rm -Rf -- "$repo_dir"
+}
+
+# Del a list of new repositories to the list.
+# Args: repo_name...
+function carton_repo_list_del_repo_list()
+{
+    if [ $# != 0 ]; then
+        for repo_name in "$@"; do
+            carton_repo_list_del_repo "$repo_name" >/dev/null
+        done
+    fi
 }
 
 fi # _CARTON_REPO_LIST_SH
