@@ -72,10 +72,11 @@ ep_suite_begin is_valid; (
     ep_test empty               -e1 carton_channel_is_valid ""
     ep_test slash_only          -e1 carton_channel_is_valid "/"
     ep_test empty_pattern       -e0 carton_channel_is_valid "repo/"
-    ep_test empty_repo          -e1 carton_channel_is_valid "/v.*"
+    ep_test empty_repo          -e1 carton_channel_is_valid "/^1"
+    ep_test invalid_repo        -e1 carton_channel_is_valid "re:po/^1"
     ep_test without_slash       -e0 carton_channel_is_valid "repo"
-    ep_test full                -e0 carton_channel_is_valid "repo/v.*"
-    ep_test pattern_with_slash  -e0 carton_channel_is_valid "repo/v/.*"
+    ep_test full                -e0 carton_channel_is_valid "repo/^1"
+    ep_test pattern_with_slash  -e0 carton_channel_is_valid "repo/^1/.*"
 ); ep_suite_end
 
 ep_suite_begin is_applicable; (
