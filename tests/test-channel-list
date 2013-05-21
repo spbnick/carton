@@ -1,0 +1,196 @@
+#!/bin/bash
+#
+# carton_channel_list.sh tests
+#
+# Copyright (c) 2013 Red Hat, Inc. All rights reserved.
+#
+# This copyrighted material is made available to anyone wishing
+# to use, modify, copy, or redistribute it subject to the terms
+# and conditions of the GNU General Public License version 2.
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public
+# License along with this program; if not, write to the Free
+# Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
+
+eval "`ep_env || echo false`"
+. ep.sh
+ep_suite_init "$@"
+
+declare -r DATA_DIR=`mktemp --tmpdir -d carton-test.XXXXXXXX`
+ep_teardown_push rm -Rf "$DATA_DIR"
+
+declare CARTON_DATA_DIR="$DATA_DIR/carton"
+mkdir "$CARTON_DATA_DIR"
+eval "`carton-env || echo false`"
+
+ep_test_begin source; (
+    ep_test_init
+    . carton_channel_list.sh
+); ep_test_end
+
+. test_git.sh
+. carton_repo_list.sh
+. carton_commit.sh
+
+# Create repo list
+mkdir "$CARTON_REPO_LIST_DIR"
+
+# Create revision
+declare -r WORK_DIR="$DATA_DIR/work"
+test_git_make "$WORK_DIR"
+declare GIT_DIR="$WORK_DIR/.git"
+
+declare -r commit_dir="$DATA_DIR/commit"
+mkdir "$commit_dir"
+declare commit
+commit=`carton_commit_init "$commit_dir" < <(
+    GIT_DIR="$GIT_DIR" git archive --format=tar "v1"
+)`
+declare rev
+rev=`carton_commit_add_rev "$commit" 0`
+
+# Test publishing to a channel list
+# Args: name channel_list rev repo_mask...
+function test_channel_list()
+{
+    declare -r name="$1";           shift
+    declare -r channel_list="$1";   shift
+    declare -r rev="$1";            shift
+    declare -r -a repo_mask_list=("$@")
+    declare repo_mask
+    declare -A repo_map=()
+
+    if [ "${#repo_mask_list[@]}" != 0 ]; then
+        for repo_mask in "${repo_mask_list[@]}"; do
+            if [ "${repo_mask::1}" == "+" ]; then
+                repo_map[${repo_mask:1}]=true
+            else
+                repo_map[${repo_mask:1}]=false
+            fi
+        done
+    fi
+
+    ep_suite_begin "$name"; (
+        ep_suite_init
+
+        ep_suite_begin publish; (
+            ep_suite_init
+
+            ep_suite_begin exec; (
+                ep_suite_init
+                carton_repo_list_add_repo_list "${!repo_map[@]}"
+                ep_teardown_push carton_repo_list_del_repo_list "${!repo_map[@]}"
+                ep_test do carton_channel_list_publish "$channel_list" "$rev"
+            ); ep_suite_end
+
+            ep_suite_begin verify; (
+                ep_suite_init
+                carton_repo_list_add_repo_list "${!repo_map[@]}"
+                ep_teardown_push carton_repo_list_del_repo_list "${!repo_map[@]}"
+                carton_channel_list_publish "$channel_list" "$rev"
+                ep_test_begin is_published; (
+                    ep_test_init
+                    if [ "${#repo_map[@]}" != 0 ]; then
+                        for repo in "${!repo_map[@]}"; do
+                            if "${repo_map[$repo]}"; then
+                                carton_repo_is_published \
+                                    "`carton_repo_list_get_repo \"\$repo\"`" \
+                                    "$rev"
+                            else
+                                ! carton_repo_is_published \
+                                    "`carton_repo_list_get_repo \"\$repo\"`" \
+                                    "$rev"
+                            fi
+                        done
+                    fi
+                ); ep_test_end
+            ); ep_suite_end
+        ); ep_suite_end
+
+        ep_suite_begin withdraw; (
+            ep_suite_init
+
+            ep_suite_begin exec; (
+                ep_suite_init
+                carton_repo_list_add_repo_list "${!repo_map[@]}"
+                ep_teardown_push carton_repo_list_del_repo_list "${!repo_map[@]}"
+                carton_channel_list_publish "$channel_list" "$rev"
+                ep_test do carton_channel_list_withdraw "$channel_list" "$rev"
+            ); ep_suite_end
+
+            ep_suite_begin verify; (
+                ep_suite_init
+                carton_repo_list_add_repo_list "${!repo_map[@]}"
+                ep_teardown_push carton_repo_list_del_repo_list "${!repo_map[@]}"
+                carton_channel_list_publish "$channel_list" "$rev"
+                carton_channel_list_withdraw "$channel_list" "$rev"
+                ep_test_begin is_not_published; (
+                    ep_test_init
+                    if [ "${#repo_map[@]}" != 0 ]; then
+                        for repo in "${!repo_map[@]}"; do
+                            ! carton_repo_is_published \
+                                "`carton_repo_list_get_repo \"\$repo\"`" "$rev"
+                        done
+                    fi
+                ); ep_test_end
+            ); ep_suite_end
+        ); ep_suite_end
+
+        ep_suite_begin is_published; (
+            ep_suite_init
+            carton_repo_list_add_repo_list "${!repo_map[@]}"
+            ep_teardown_push carton_repo_list_del_repo_list "${!repo_map[@]}"
+
+            ep_test before_publishing -e1 carton_channel_list_is_published \
+                                                "$channel_list" "$rev"
+            carton_channel_list_publish "$channel_list" "$rev"
+            ep_test after_publishing carton_channel_list_is_published \
+                                                "$channel_list" "$rev"
+            carton_channel_list_withdraw "$channel_list" "$rev"
+            ep_test after_withdrawal -e1 carton_channel_list_is_published \
+                                                "$channel_list" "$rev"
+        ); ep_suite_end
+    ); ep_suite_end
+}
+
+
+# Workaround vim subshell syntax highlighting issue
+{
+
+. carton_channel_list.sh
+
+ep_suite_begin is_valid; (
+    ep_suite_init
+    ep_test empty               -e0 carton_channel_list_is_valid ""
+    ep_test one_valid           -e0 carton_channel_list_is_valid "repo/^v"
+    ep_test one_invalid         -e1 carton_channel_list_is_valid "re:po"
+    ep_test two_valid           -e0 carton_channel_list_is_valid "repo/^v repo"
+    ep_test two_invalid         -e1 carton_channel_list_is_valid "re:po /"
+    ep_test valid_and_invalid   -e1 carton_channel_list_is_valid "repo /"
+); ep_suite_end
+
+ep_suite_begin is_applicable; (
+    ep_suite_init
+    ep_test empty               -e1 carton_channel_list_is_applicable ""            "$rev"
+    ep_test one_applicable      -e0 carton_channel_list_is_applicable "r"           "$rev"
+    ep_test one_non_applicable  -e1 carton_channel_list_is_applicable "r/^2"        "$rev"
+    ep_test two_applicable      -e0 carton_channel_list_is_applicable "a b"         "$rev"
+    ep_test two_non_applicable  -e1 carton_channel_list_is_applicable "a/^2 b/^3"   "$rev"
+    ep_test both                -e0 carton_channel_list_is_applicable "a b/^3"      "$rev"
+); ep_suite_end
+
+ep_suite_begin list; (
+    ep_suite_init
+    test_channel_list one_applicable "a" "$rev" +a
+    test_channel_list two_applicable "a b" "$rev" +a +b
+    test_channel_list applicable_first "a b/^2" "$rev" +a -b
+    test_channel_list applicable_second "a/^2 b" "$rev" -a +b
+); ep_suite_end
+
+} # Workaround vim subshell syntax highlighting issue

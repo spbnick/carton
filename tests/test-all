@@ -22,8 +22,9 @@ eval "`ep_env || echo false`"
 . ep.sh
 ep_suite_init "$@"
 
-ep_suite rev        test-rev
-ep_suite commit     test-commit
-ep_suite repo       test-repo
-ep_suite repo_list  test-repo-list
-ep_suite channel    test-channel
+ep_suite rev            test-rev
+ep_suite commit         test-commit
+ep_suite repo           test-repo
+ep_suite repo_list      test-repo-list
+ep_suite channel        test-channel
+ep_suite channel_list   test-channel-list
