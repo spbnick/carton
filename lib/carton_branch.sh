@@ -39,7 +39,7 @@ declare -r _CARTON_BRANCH_LOAD_BASE='
     declare -r git_dir="$1";    shift
     carton_assert "[ -d \"\$git_dir\" ]"
     declare -r name="$1";   shift
-    carton_assert "carton_branch_name_is_valid \"\$name\""
+    carton_assert "carton_branch_name_is_valid \"\$git_dir\" \"\$name\""
 
     declare -A branch=(
         [git_dir]="$git_dir"
@@ -48,13 +48,22 @@ declare -r _CARTON_BRANCH_LOAD_BASE='
 '
 
 # Initialize a branch and output its string.
-# Args: git_dir name
+# Args: git_dir name [channel_list]
 # Output: branch string
 function carton_branch_init()
 {
     eval "$_CARTON_BRANCH_LOAD_BASE"
+    declare channel_list_str
+    if [ $# != 0 ]; then
+        channel_list_str="$1"
+        shift
+    else
+        channel_list_str=""
+    fi
+    carton_assert 'carton_channel_list_is_valid "$channel_list_str"'
     GIT_DIR="${branch[git_dir]}" \
-        git config "branch.${branch[name]}.carton-channel-list" ""
+        git config "branch.${branch[name]}.carton-channel-list" \
+                   "$channel_list_str"
     carton_arr_print branch
 }
 
@@ -72,7 +81,6 @@ function carton_branch_load()
 function carton_branch_get_channel_list()
 {
     declare -r branch_str="$1";    shift
-    carton_assert 'carton_is_valid_str_name "$branch_str"'
     declare -A branch
     carton_arr_parse branch <<<"$branch_str"
     declare channel_list_str
