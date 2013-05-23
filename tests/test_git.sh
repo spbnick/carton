@@ -180,6 +180,117 @@ function test_git_tag_v2()
     git tag --annotate --message "Release v2" v2
 )
 
+# Create v2 branch
+# Args: [dir]
+function test_git_branch_v2()
+(
+    cd "${1-.}"
+    git branch v2.x v2
+)
+
+# Commit v2 branch post-v2 history
+# Args: [dir]
+function test_git_v2_post_v2()
+(
+    cd "${1-.}"
+    git checkout -q v2.x
+    for f in g h i; do
+        git rm -q "$f"
+        sed -e "/ += $f/d" -i Makefile.am
+        git add *
+        git commit --quiet --message "Del $f"
+        git tag "del_$f"
+    done
+    git checkout -q -
+)
+
+# Commit post-v2 history
+# Args: [dir]
+function test_git_post_v2()
+(
+    cd "${1-.}"
+    for f in m n o; do
+        echo "$f" > "$f"
+        echo "dist_pkgdata_DATA += $f" >> Makefile.am
+        git add *
+        git commit --quiet --message "Add $f"
+        git tag "add_$f"
+    done
+)
+
+# Merge v2.1 fixes into master
+# Args: [dir]
+function test_git_merge_v2_1()
+(
+    cd "${1-.}"
+    git merge -q -m 'Merge v2.1 fixes' del_i >/dev/null
+    git tag "merge_v2.1"
+)
+
+function test_git_v2_merge_master()
+(
+    cd "${1-.}"
+    git checkout -q v2.x
+    git merge -q -m 'Merge master fixes' add_o >/dev/null
+    git checkout -q -
+)
+
+# Commit v2 branch v2.1 update
+# Args: [dir]
+function test_git_v2_commit_v2_1()
+(
+    cd "${1-.}"
+    git checkout -q v2.x
+    sed -e '/\[carton-test\]/ s/\[2\]/[2.1]/' -i configure.ac
+    sed -e "/Version:/ s/2/2.1/" -i carton-test.spec
+    git commit --quiet --all --message 'Increase version'
+    git tag "v2.1_update"
+    git checkout -q -
+)
+
+# Tag v2 branch v2.1
+# Args: [dir]
+function test_git_v2_tag_v2_1()
+(
+    cd "${1-.}"
+    git checkout -q v2.x
+    git tag --annotate --message "Release v2.1" v2.1
+    git checkout -q -
+)
+
+# Commit v3 update
+# Args: [dir]
+function test_git_commit_v3()
+(
+    cd "${1-.}"
+    sed -e '/\[carton-test\]/ s/\[2\]/[3]/' -i configure.ac
+    sed -e "/Version:/ s/2/3/" -i carton-test.spec
+    git commit --quiet --all --message 'Increase version'
+    git tag "v3_update"
+)
+
+# Commit pre-v3 history
+# Args: [dir]
+function test_git_commit_pre_v3()
+(
+    cd "${1-.}"
+    for f in p q r; do
+        echo "$f" > "$f"
+        echo "dist_pkgdata_DATA += $f" >> Makefile.am
+        git add *
+        git commit --quiet --message "Add $f"
+        git tag "add_$f"
+    done
+)
+
+# Tag v3
+# Args: [dir]
+function test_git_tag_v3()
+(
+    cd "${1-.}"
+    git tag --annotate --message "Release v3" v3
+)
+
 # Make complete test git repo
 # Args: [dir]
 function test_git_make()
@@ -195,7 +306,17 @@ function test_git_make()
              commit_post_v1 \
              commit_v2 \
              commit_pre_v2 \
-             tag_v2; do
+             tag_v2 \
+             branch_v2 \
+             v2_post_v2 \
+             post_v2 \
+             merge_v2_1 \
+             v2_merge_master \
+             v2_commit_v2_1 \
+             v2_tag_v2_1 \
+             commit_v3 \
+             commit_pre_v3 \
+             tag_v3; do
         "test_git_$f" "$dir"
     done
 }
