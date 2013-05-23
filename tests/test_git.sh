@@ -119,7 +119,7 @@ function test_git_commit_pre_v1()
     for f in d e f; do
         echo "$f" > "$f"
         echo "dist_pkgdata_DATA += $f" >> Makefile.am
-        git add * 
+        git add *
         git commit --quiet --message "Add $f"
         git tag "add_$f"
     done
@@ -141,7 +141,7 @@ function test_git_commit_post_v1()
     for f in g h i; do
         echo "$f" > "$f"
         echo "dist_pkgdata_DATA += $f" >> Makefile.am
-        git add * 
+        git add *
         git commit --quiet --message "Add $f"
         git tag "add_$f"
     done
@@ -166,7 +166,7 @@ function test_git_commit_pre_v2()
     for f in j k l; do
         echo "$f" > "$f"
         echo "dist_pkgdata_DATA += $f" >> Makefile.am
-        git add * 
+        git add *
         git commit --quiet --message "Add $f"
         git tag "add_$f"
     done
