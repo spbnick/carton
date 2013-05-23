@@ -62,7 +62,10 @@ function test_git_commit_v1()
         AC_OUTPUT
     ' > configure.ac
     carton_unindent <<<'
-        dist_pkgdata_DATA = a b c
+        dist_pkgdata_DATA =
+        dist_pkgdata_DATA += a
+        dist_pkgdata_DATA += b
+        dist_pkgdata_DATA += c
     ' > Makefile.am
     git add *
     git commit --quiet --message 'Add build support'
@@ -115,7 +118,7 @@ function test_git_commit_pre_v1()
     cd "${1-.}"
     for f in d e f; do
         echo "$f" > "$f"
-        sed -e "/DATA/ s/$/ $f/" -i Makefile.am
+        echo "dist_pkgdata_DATA += $f" >> Makefile.am
         git add * 
         git commit --quiet --message "Add $f"
         git tag "add_$f"
@@ -137,7 +140,7 @@ function test_git_commit_post_v1()
     cd "${1-.}"
     for f in g h i; do
         echo "$f" > "$f"
-        sed -e "/DATA/ s/$/ $f/" -i Makefile.am
+        echo "dist_pkgdata_DATA += $f" >> Makefile.am
         git add * 
         git commit --quiet --message "Add $f"
         git tag "add_$f"
@@ -162,7 +165,7 @@ function test_git_commit_pre_v2()
     cd "${1-.}"
     for f in j k l; do
         echo "$f" > "$f"
-        sed -e "/DATA/ s/$/ $f/" -i Makefile.am
+        echo "dist_pkgdata_DATA += $f" >> Makefile.am
         git add * 
         git commit --quiet --message "Add $f"
         git tag "add_$f"
