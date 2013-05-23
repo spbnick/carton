@@ -23,17 +23,17 @@ declare _TEST_GIT_SH=
 . carton_util.sh
 
 # Initialize repo
-# Args: dir
+# Args: [dir]
 function test_git_init()
 {
-    git init --quiet "$1"
+    git init --quiet "${1-.}"
 }
 
 # Commit pre-build-support history
-# Args: dir
+# Args: [dir]
 function test_git_commit_pre_build()
 (
-    cd "$1"
+    cd "${1-.}"
     for f in a b c; do
         echo "$f" > "$f"
         git add *
@@ -43,10 +43,10 @@ function test_git_commit_pre_build()
 )
 
 # Commit v1 build support
-# Args: dir
+# Args: [dir]
 function test_git_commit_v1()
 (
-    cd "$1"
+    cd "${1-.}"
     carton_unindent <<<'
         set -o errexit
         aclocal
@@ -71,10 +71,10 @@ function test_git_commit_v1()
 )
 
 # Commit spec file
-# Args: dir
+# Args: [dir]
 function test_git_commit_spec()
 (
-    cd "$1"
+    cd "${1-.}"
     carton_unindent <<<'
         Name:       carton-test
         Version:    1
@@ -109,10 +109,10 @@ function test_git_commit_spec()
 )
 
 # Commit pre-v1 history
-# Args: dir
+# Args: [dir]
 function test_git_commit_pre_v1()
 (
-    cd "$1"
+    cd "${1-.}"
     for f in d e f; do
         echo "$f" > "$f"
         sed -e "/DATA/ s/$/ $f/" -i Makefile.am
@@ -123,18 +123,18 @@ function test_git_commit_pre_v1()
 )
 
 # Tag v1
-# Args: dir
+# Args: [dir]
 function test_git_tag_v1()
 (
-    cd "$1"
+    cd "${1-.}"
     git tag --annotate --message "Release v1" v1
 )
 
 # Commit post-v1 history
-# Args: dir
+# Args: [dir]
 function test_git_commit_post_v1()
 (
-    cd "$1"
+    cd "${1-.}"
     for f in g h i; do
         echo "$f" > "$f"
         sed -e "/DATA/ s/$/ $f/" -i Makefile.am
@@ -145,10 +145,10 @@ function test_git_commit_post_v1()
 )
 
 # Commit v2 update
-# Args: dir
+# Args: [dir]
 function test_git_commit_v2()
 (
-    cd "$1"
+    cd "${1-.}"
     sed -e '/\[carton-test\]/ s/\[1\]/[2]/' -i configure.ac
     sed -e "/Version:/ s/1/2/" -i carton-test.spec
     git commit --quiet --all --message 'Increase version'
@@ -156,10 +156,10 @@ function test_git_commit_v2()
 )
 
 # Commit pre-v2 history
-# Args: dir
+# Args: [dir]
 function test_git_commit_pre_v2()
 (
-    cd "$1"
+    cd "${1-.}"
     for f in j k l; do
         echo "$f" > "$f"
         sed -e "/DATA/ s/$/ $f/" -i Makefile.am
@@ -170,18 +170,18 @@ function test_git_commit_pre_v2()
 )
 
 # Tag v2
-# Args: dir
+# Args: [dir]
 function test_git_tag_v2()
 (
-    cd "$1"
+    cd "${1-.}"
     git tag --annotate --message "Release v2" v2
 )
 
 # Make complete test git repo
-# Args: dir
+# Args: [dir]
 function test_git_make()
 {
-    declare -r dir="$1"
+    declare -r dir="${1-.}"
 
     for f in init \
              commit_pre_build \
