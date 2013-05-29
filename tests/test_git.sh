@@ -130,7 +130,7 @@ function test_git_commit_pre_v1()
 function test_git_tag_v1()
 (
     cd "${1-.}"
-    git tag --annotate --message "Release v1" v1
+    git tag --annotate --message "Release v1" v1 add_f
 )
 
 # Commit post-v1 history
@@ -177,7 +177,7 @@ function test_git_commit_pre_v2()
 function test_git_tag_v2()
 (
     cd "${1-.}"
-    git tag --annotate --message "Release v2" v2
+    git tag --annotate --message "Release v2" v2 add_l
 )
 
 # Create v2 branch
@@ -254,7 +254,7 @@ function test_git_v2_tag_v2_1()
 (
     cd "${1-.}"
     git checkout -q v2.x
-    git tag --annotate --message "Release v2.1" v2.1
+    git tag --annotate --message "Release v2.1" v2.1 v2.1_update
     git checkout -q -
 )
 
@@ -288,7 +288,7 @@ function test_git_commit_pre_v3()
 function test_git_tag_v3()
 (
     cd "${1-.}"
-    git tag --annotate --message "Release v3" v3
+    git tag --annotate --message "Release v3" v3 add_r
 )
 
 # Make complete test git repo
