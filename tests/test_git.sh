@@ -190,7 +190,7 @@ function test_git_branch_v2()
 
 # Commit v2 branch post-v2 history
 # Args: [dir]
-function test_git_v2_post_v2()
+function test_git_v2_commit_post_v2()
 (
     cd "${1-.}"
     git checkout -q v2.x
@@ -206,7 +206,7 @@ function test_git_v2_post_v2()
 
 # Commit post-v2 history
 # Args: [dir]
-function test_git_post_v2()
+function test_git_commit_post_v2()
 (
     cd "${1-.}"
     for f in m n o; do
@@ -308,8 +308,8 @@ function test_git_make()
              commit_pre_v2 \
              tag_v2 \
              branch_v2 \
-             v2_post_v2 \
-             post_v2 \
+             v2_commit_post_v2 \
+             commit_post_v2 \
              merge_v2_1 \
              v2_merge_master \
              v2_commit_v2_1 \
