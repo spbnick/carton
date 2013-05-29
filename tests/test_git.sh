@@ -291,11 +291,19 @@ function test_git_tag_v3()
     git tag --annotate --message "Release v3" v3 add_r
 )
 
-# Make complete test git repo
-# Args: [dir]
+# Make test git repo.
+# Args: [dir [until [filter [after]]]]
 function test_git_make()
-{
+(
     declare -r dir="${1-.}"
+    declare -r until="${2-}"
+    declare -r filter="${3-*}"
+    declare after
+    if [ -n "${4+set}" ]; then
+        after="$4"
+    fi
+
+    shopt -s extglob
 
     for f in init \
              commit_pre_build \
@@ -317,8 +325,17 @@ function test_git_make()
              commit_v3 \
              commit_pre_v3 \
              tag_v3; do
-        "test_git_$f" "$dir"
+        if [ -n "${after+set}" ]; then
+            if [[ "$f" == $after ]]; then
+                unset after
+            fi
+        elif [[ "$f" == $filter ]]; then
+            "test_git_$f" "$dir"
+        fi
+        if [[ "$f" == $until ]]; then
+            break
+        fi
     done
-}
+)
 
 fi # _TEST_GIT_SH
