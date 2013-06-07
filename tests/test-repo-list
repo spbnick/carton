@@ -86,7 +86,7 @@ ep_suite_begin del; (
         ep_teardown_push rm -Rf "$CARTON_REPO_LIST_DIR"
         carton_repo_list_add_repo test >/dev/null
         carton_repo_list_del_repo test
-        ep_test doesnt_exist -e 1 carton_repo_list_has_repo test
+        ep_test not_exists -e 1 carton_repo_list_has_repo test
     ); ep_suite_end
 ); ep_suite_end
 

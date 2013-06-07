@@ -72,7 +72,7 @@ function test_rev()
                 ep_teardown_push rm -Rf "${commit[rev_dir]}/1"
                 carton_commit_add_rev "$commit_str" 1 >/dev/null
                 carton_commit_del_rev "$commit_str" 1
-                ep_test doesnt_exist \
+                ep_test not_exists \
                         eval "! test -d \"\${commit[rev_dir]}/1\""
             ); ep_suite_end
         ); ep_suite_end
