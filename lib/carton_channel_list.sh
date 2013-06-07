@@ -105,6 +105,19 @@ function carton_channel_list_publish()
     fi
 }
 
+# Publish a revision in a channel list, if it is applicable.
+# Args: channel_list_str rev_str
+function carton_channel_list_publish_if_applicable()
+{
+    declare -r channel_list_str="$1";   shift
+    carton_assert "carton_channel_list_is_valid \"\$channel_list_str\""
+    declare -r rev_str="$1";   shift
+
+    if carton_channel_list_is_applicable "$channel_list_str" "$rev_str"; then
+        carton_channel_list_publish "$channel_list_str" "$rev_str"
+    fi
+}
+
 # Withdraw (remove) a revision from a channel list.
 # Args: channel_list_str rev_str
 function carton_channel_list_withdraw()
