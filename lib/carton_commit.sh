@@ -158,7 +158,7 @@ function carton_commit_add_or_get_rev()
     declare -r rev_num="$1";       shift
     carton_assert 'carton_rev_num_is_valid "$rev_num"'
 
-    if carton_commit_rev_exists "$commit_str" "$rev_num"; then
+    if carton_commit_has_rev "$commit_str" "$rev_num"; then
         carton_commit_get_rev "$commit_str" "$rev_num"
     else
         carton_commit_add_rev "$commit_str" "$rev_num"
