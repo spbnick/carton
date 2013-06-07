@@ -31,7 +31,7 @@ function test_git_init()
 
 # Commit pre-build-support history
 # Args: [dir]
-function test_git_commit_pre_build()
+function test_git_commit_master_pre_build()
 (
     cd "${1-.}"
     for f in a b c; do
@@ -44,7 +44,7 @@ function test_git_commit_pre_build()
 
 # Commit v1 build support
 # Args: [dir]
-function test_git_commit_v1()
+function test_git_commit_master_v1()
 (
     cd "${1-.}"
     carton_unindent <<<'
@@ -75,7 +75,7 @@ function test_git_commit_v1()
 
 # Commit spec file
 # Args: [dir]
-function test_git_commit_spec()
+function test_git_commit_master_spec()
 (
     cd "${1-.}"
     carton_unindent <<<'
@@ -113,7 +113,7 @@ function test_git_commit_spec()
 
 # Commit pre-v1 history
 # Args: [dir]
-function test_git_commit_pre_v1()
+function test_git_commit_master_pre_v1()
 (
     cd "${1-.}"
     for f in d e f; do
@@ -135,7 +135,7 @@ function test_git_tag_v1()
 
 # Commit post-v1 history
 # Args: [dir]
-function test_git_commit_post_v1()
+function test_git_commit_master_post_v1()
 (
     cd "${1-.}"
     for f in g h i; do
@@ -149,7 +149,7 @@ function test_git_commit_post_v1()
 
 # Commit v2 update
 # Args: [dir]
-function test_git_commit_v2()
+function test_git_commit_master_v2()
 (
     cd "${1-.}"
     sed -e '/\[carton-test\]/ s/\[1\]/[2]/' -i configure.ac
@@ -160,7 +160,7 @@ function test_git_commit_v2()
 
 # Commit pre-v2 history
 # Args: [dir]
-function test_git_commit_pre_v2()
+function test_git_commit_master_pre_v2()
 (
     cd "${1-.}"
     for f in j k l; do
@@ -190,7 +190,7 @@ function test_git_branch_v2()
 
 # Commit v2 branch post-v2 history
 # Args: [dir]
-function test_git_v2_commit_post_v2()
+function test_git_commit_v2_post_v2()
 (
     cd "${1-.}"
     git checkout -q v2.x
@@ -206,7 +206,7 @@ function test_git_v2_commit_post_v2()
 
 # Commit post-v2 history
 # Args: [dir]
-function test_git_commit_post_v2()
+function test_git_commit_master_post_v2()
 (
     cd "${1-.}"
     for f in m n o; do
@@ -220,14 +220,14 @@ function test_git_commit_post_v2()
 
 # Merge v2.1 fixes into master
 # Args: [dir]
-function test_git_merge_v2_1()
+function test_git_merge_master_v2_1()
 (
     cd "${1-.}"
     git merge -q -m 'Merge v2.1 fixes' del_i >/dev/null
     git tag "merge_v2.1"
 )
 
-function test_git_v2_merge_master()
+function test_git_merge_v2_master()
 (
     cd "${1-.}"
     git checkout -q v2.x
@@ -237,7 +237,7 @@ function test_git_v2_merge_master()
 
 # Commit v2 branch v2.1 update
 # Args: [dir]
-function test_git_v2_commit_v2_1()
+function test_git_commit_v2_v2_1()
 (
     cd "${1-.}"
     git checkout -q v2.x
@@ -248,9 +248,9 @@ function test_git_v2_commit_v2_1()
     git checkout -q -
 )
 
-# Tag v2 branch v2.1
+# Tag v2.1
 # Args: [dir]
-function test_git_v2_tag_v2_1()
+function test_git_tag_v2_1()
 (
     cd "${1-.}"
     git checkout -q v2.x
@@ -260,7 +260,7 @@ function test_git_v2_tag_v2_1()
 
 # Commit v3 update
 # Args: [dir]
-function test_git_commit_v3()
+function test_git_commit_master_v3()
 (
     cd "${1-.}"
     sed -e '/\[carton-test\]/ s/\[2\]/[3]/' -i configure.ac
@@ -271,7 +271,7 @@ function test_git_commit_v3()
 
 # Commit pre-v3 history
 # Args: [dir]
-function test_git_commit_pre_v3()
+function test_git_commit_master_pre_v3()
 (
     cd "${1-.}"
     for f in p q r; do
@@ -306,24 +306,24 @@ function test_git_make()
     shopt -s extglob
 
     for f in init \
-             commit_pre_build \
-             commit_v1 \
-             commit_spec \
-             commit_pre_v1 \
+             commit_master_pre_build \
+             commit_master_v1 \
+             commit_master_spec \
+             commit_master_pre_v1 \
              tag_v1 \
-             commit_post_v1 \
-             commit_v2 \
-             commit_pre_v2 \
+             commit_master_post_v1 \
+             commit_master_v2 \
+             commit_master_pre_v2 \
              tag_v2 \
              branch_v2 \
-             v2_commit_post_v2 \
-             commit_post_v2 \
-             merge_v2_1 \
-             v2_merge_master \
-             v2_commit_v2_1 \
-             v2_tag_v2_1 \
-             commit_v3 \
-             commit_pre_v3 \
+             commit_v2_post_v2 \
+             commit_master_post_v2 \
+             merge_master_v2_1 \
+             merge_v2_master \
+             commit_v2_v2_1 \
+             tag_v2_1 \
+             commit_master_v3 \
+             commit_master_pre_v3 \
              tag_v3; do
         if [ -n "${after+set}" ]; then
             if [[ "$f" == $after ]]; then
