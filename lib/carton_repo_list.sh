@@ -98,7 +98,7 @@ function carton_repo_list_del_repo()
     rm -Rf -- "$repo_dir"
 }
 
-# Del a list of new repositories to the list.
+# Del a list of repositories from the list.
 # Args: repo_name...
 function carton_repo_list_del_repo_list()
 {
