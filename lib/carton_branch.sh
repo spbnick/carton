@@ -75,20 +75,39 @@ function carton_branch_load()
     carton_arr_print branch
 }
 
+# Output a branch configuration option value.
+# Args: branch_str name
+# Output: value
+function _carton_branch_config_get()
+{
+    declare -r branch_str="$1";    shift
+    declare -r name="$1";           shift
+    declare -A branch
+    carton_arr_parse branch <<<"$branch_str"
+    GIT_DIR="${branch[git_dir]}" \
+        git config --get "branch.${branch[name]}.carton-$name"
+}
+
+# Set a branch configuration option value.
+# Args: branch_str name value
+function _carton_branch_config_set()
+{
+    declare -r branch_str="$1";    shift
+    declare -r name="$1";           shift
+    declare -r value="$1";          shift
+    declare -A branch
+    carton_arr_parse branch <<<"$branch_str"
+    GIT_DIR="${branch[git_dir]}" \
+        git config "branch.${branch[name]}.carton-$name" "$value"
+}
+
 # Get a branch channel list.
 # Args: branch_str
 # Output: channel list string
 function carton_branch_get_channel_list()
 {
-    declare -r branch_str="$1";    shift
-    declare -A branch
-    carton_arr_parse branch <<<"$branch_str"
     declare channel_list_str
-    channel_list_str=`
-        GIT_DIR="${branch[git_dir]}"
-            git config --get \
-                "branch.${branch[name]}.carton-channel-list"
-    `
+    channel_list_str=`_carton_branch_config_get "$1" "channel-list"`
     carton_assert 'carton_channel_list_is_valid "$channel_list_str"'
     echo -n "$channel_list_str"
 }
@@ -100,12 +119,7 @@ function carton_branch_set_channel_list()
     declare -r branch_str="$1";         shift
     declare -r channel_list_str="$1";   shift
     carton_assert 'carton_channel_list_is_valid "$channel_list_str"'
-    declare -A branch
-    carton_arr_parse branch <<<"$branch_str"
-
-    GIT_DIR="${branch[git_dir]}" \
-        git config "branch.${branch[name]}.carton-channel-list" \
-                   "$channel_list_str"
+    _carton_branch_config_set "$branch_str" "channel-list" "$channel_list_str"
 }
 
 fi # _CARTON_BRANCH_SH
