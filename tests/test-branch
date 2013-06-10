@@ -18,7 +18,7 @@
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA 02110-1301, USA.
 
-eval "`ep_env && carton-env || echo false`"
+eval "`ep_env && carton-env || echo exit 1`"
 . test_git.sh
 . ep.sh
 ep_suite_init "$@"
