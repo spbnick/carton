@@ -70,10 +70,14 @@ function carton_backtrace()
 }
 
 # Abort shell, optionally outputting a message to stderr.
-# Args: [echo_arg]...
+# Args: [frame [echo_arg]...]
 function carton_abort()
 {
+    declare -r frame="${1-1}";  shift || true
+    carton_assert '(( "$frame" >= 0 ))'
+
     if [ $# != 0 ]; then
+        carton_backtrace "$((frame + 1))" >&2
         echo "$@" >&2
     fi
     exit 1
@@ -83,7 +87,7 @@ function carton_abort()
 # Args: [eval_arg]...
 function carton_assert()
 {
-    eval "$@" || carton_abort "Assertion failed: $@"
+    eval "$@" || carton_abort 1 "Assertion failed: $@"
 }
 
 # Check if a string is suitable for use in a data sub-directory path.
