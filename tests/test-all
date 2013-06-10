@@ -29,3 +29,4 @@ ep_suite repo_list      test-repo-list
 ep_suite channel        test-channel
 ep_suite channel_list   test-channel-list
 ep_suite branch         test-branch
+ep_suite project        test-project

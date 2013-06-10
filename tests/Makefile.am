@@ -27,6 +27,8 @@ dist_noinst_SCRIPTS = \
     test-channel		\
     test-channel-list	\
     test-commit         \
+    test-project        \
+    test-project-update \
     test-repo           \
     test-repo-list      \
     test-rev

@@ -1,0 +1,413 @@
+#!/bin/bash
+#
+# carton_project.sh tests
+#
+# Copyright (c) 2013 Red Hat, Inc. All rights reserved.
+#
+# This copyrighted material is made available to anyone wishing
+# to use, modify, copy, or redistribute it subject to the terms
+# and conditions of the GNU General Public License version 2.
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public
+# License along with this program; if not, write to the Free
+# Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
+
+eval "`ep_env || echo false`"
+. ep.sh
+ep_suite_init "$@"
+
+declare -r DATA_DIR=`mktemp --tmpdir -d carton-test.XXXXXXXX`
+ep_teardown_push rm -Rf "$DATA_DIR"
+
+declare CARTON_DATA_DIR="$DATA_DIR/carton"
+mkdir "$CARTON_DATA_DIR"
+eval "`carton-env || echo false`"
+
+ep_test_begin source; (
+    ep_test_init
+    . carton_project.sh
+); ep_test_end
+
+. test_git.sh
+. carton_project.sh
+
+# Create git repo
+declare -r WORK_DIR="$DATA_DIR/work"
+declare GIT_DIR="$WORK_DIR/.git"
+declare -r TMP_WORK_DIR="$DATA_DIR/tmp_work"
+declare TMP_GIT_DIR="$TMP_WORK_DIR/.git"
+test_git_make "$WORK_DIR"
+
+declare -r PROJECT_DIR="$DATA_DIR/project"
+
+# Workaround vim subshell syntax highlighting issue
+{
+
+ep_suite_begin init; (
+    ep_suite_init
+
+    declare name tag_glob tag_format update_max_age args
+    while read -r name tag_glob tag_format update_max_age args; do
+        ep_suite_begin "$name"; (
+            ep_suite_init
+
+            ep_suite_begin exec; (
+                ep_suite_init
+                mkdir "$PROJECT_DIR"
+                ep_teardown_push rm -Rf "$PROJECT_DIR"
+                eval "ep_test do carton_project_init \
+                                    \"\$PROJECT_DIR\" \"\$GIT_DIR\" \
+                                    $args" >/dev/null
+            ); ep_suite_end
+
+            ep_suite_begin verify; (
+                ep_suite_init
+                mkdir "$PROJECT_DIR"
+                ep_teardown_push rm -Rf "$PROJECT_DIR"
+                declare project_str
+                project_str=`eval "carton_project_init \
+                                    \"\$PROJECT_DIR\" \"\$GIT_DIR\" \
+                                    $args"`
+                declare -A project
+                carton_arr_parse project <<<"$project_str"
+                cd "${project[git_dir]}"
+                ep_test tag_glob \
+                            [ "`git config --get carton.tag-glob`" == \
+                              "$tag_glob" ]
+                ep_test tag_format \
+                            [ "`git config --get carton.tag-format`" == \
+                              "$tag_format" ]
+                ep_test update_max_age \
+                            [ "`git config --get carton.update-max-age`" == \
+                              "$update_max_age" ]
+            ); ep_suite_end
+        ); ep_suite_end
+    done <<<"\
+        2_args v* v%s @0
+        4_args r* r%s @0        \"r*\" r%s
+        5_args r* r%s yesterday \"r*\" r%s yesterday"
+); ep_suite_end
+
+ep_suite_begin load; (
+    ep_suite_init
+
+    ep_suite_begin exec; (
+        ep_suite_init
+        mkdir "$PROJECT_DIR"
+        ep_teardown_push rm -Rf "$PROJECT_DIR"
+        carton_project_init "$PROJECT_DIR" "$GIT_DIR" "r*" "r%s" "yesterday" \
+                            >/dev/null
+        ep_test do carton_project_load "$PROJECT_DIR" >/dev/null
+    ); ep_suite_end
+
+    ep_suite_begin verify; (
+        ep_suite_init
+        mkdir "$PROJECT_DIR"
+        ep_teardown_push rm -Rf "$PROJECT_DIR"
+        carton_project_init "$PROJECT_DIR" "$GIT_DIR" "r*" "r%s" "yesterday" \
+                            >/dev/null
+        declare project_str
+        project_str=`carton_project_load "$PROJECT_DIR"`
+        declare -A project
+        carton_arr_parse project <<<"$project_str"
+        cd "${project[git_dir]}"
+        ep_test tag_glob \
+                    [ "`git config --get carton.tag-glob`" == \
+                      "r*" ]
+        ep_test tag_format \
+                    [ "`git config --get carton.tag-format`" == \
+                      "r%s" ]
+        ep_test update_max_age \
+                    [ "`git config --get carton.update-max-age`" == \
+                      "yesterday" ]
+    ); ep_suite_end
+); ep_suite_end
+
+ep_suite_begin fetch; (
+    ep_suite_init
+    ep_suite_begin exec; (
+        ep_suite_init
+        mkdir "$PROJECT_DIR"
+        ep_teardown_push rm -Rf "$PROJECT_DIR"
+        declare project_str
+        project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+        ep_test do carton_project_fetch "$project_str"
+    ); ep_suite_end
+    ep_suite_begin verify; (
+        ep_suite_init
+        mkdir "$PROJECT_DIR"
+        ep_teardown_push rm -Rf "$PROJECT_DIR"
+        declare project_str
+        project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+        carton_project_fetch "$project_str"
+        declare -A project
+        carton_arr_parse project <<<"$project_str"
+        GIT_DIR="${project[git_dir]}" \
+            ep_test origin_master_exists \
+                    git rev-list -n1 refs/remotes/origin/master >/dev/null
+    ); ep_suite_end
+); ep_suite_end
+
+ep_suite_begin commit; (
+    ep_suite_init
+
+    ep_suite_begin add; (
+        ep_suite_init
+        ep_suite_begin exec; (
+            ep_suite_init
+            mkdir "$PROJECT_DIR"
+            ep_teardown_push rm -Rf "$PROJECT_DIR"
+            declare project_str
+            project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+            carton_project_fetch "$project_str"
+            ep_test do carton_project_add_commit "$project_str" v1 >/dev/null
+        ); ep_suite_end
+        ep_suite_begin verify; (
+            ep_suite_init
+            mkdir "$PROJECT_DIR"
+            ep_teardown_push rm -Rf "$PROJECT_DIR"
+            declare project_str
+            project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+            carton_project_fetch "$project_str"
+            declare commit_str
+            commit_str=`carton_project_add_commit "$project_str" v1`
+            declare -A commit
+            carton_arr_parse commit <<<"$commit_str"
+            ep_test dir_exists [ -d "${commit[dir]}" ]
+        ); ep_suite_end
+    ); ep_suite_end
+
+    ep_suite_begin get; (
+        ep_suite_init
+        ep_suite_begin exec; (
+            ep_suite_init
+            mkdir "$PROJECT_DIR"
+            ep_teardown_push rm -Rf "$PROJECT_DIR"
+            declare project_str
+            project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+            carton_project_fetch "$project_str"
+            carton_project_add_commit "$project_str" v1 >/dev/null
+            ep_test do carton_project_get_commit "$project_str" v1 >/dev/null
+        ); ep_suite_end
+        ep_suite_begin verify; (
+            ep_suite_init
+            mkdir "$PROJECT_DIR"
+            ep_teardown_push rm -Rf "$PROJECT_DIR"
+            declare project_str
+            project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+            carton_project_fetch "$project_str"
+            carton_project_add_commit "$project_str" v1 >/dev/null
+            declare commit_str
+            commit_str=`carton_project_get_commit "$project_str" v1`
+            declare -A commit
+            carton_arr_parse commit <<<"$commit_str"
+            ep_test exists [ -d "${commit[dir]}" ]
+        ); ep_suite_end
+    ); ep_suite_end
+
+    ep_suite_begin del; (
+        ep_suite_init
+        ep_suite_begin exec; (
+            ep_suite_init
+            mkdir "$PROJECT_DIR"
+            ep_teardown_push rm -Rf "$PROJECT_DIR"
+            declare project_str
+            project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+            carton_project_fetch "$project_str"
+            carton_project_add_commit "$project_str" v1 >/dev/null
+            ep_test do carton_project_del_commit "$project_str" v1
+        ); ep_suite_end
+        ep_suite_begin verify; (
+            ep_suite_init
+            mkdir "$PROJECT_DIR"
+            ep_teardown_push rm -Rf "$PROJECT_DIR"
+            declare project_str
+            project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+            carton_project_fetch "$project_str"
+            declare commit_str
+            commit_str=`carton_project_add_commit "$project_str" v1`
+            declare -A commit
+            carton_arr_parse commit <<<"$commit_str"
+            carton_project_del_commit "$project_str" v1
+            ep_test not_exists eval "! [ -d "${commit[dir]}" ]"
+        ); ep_suite_end
+    ); ep_suite_end
+
+    ep_suite_begin has; (
+        ep_suite_init
+        mkdir "$PROJECT_DIR"
+        ep_teardown_push rm -Rf "$PROJECT_DIR"
+        declare project_str
+        project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+        carton_project_fetch "$project_str"
+        ep_test pristine -e1 carton_project_has_commit "$project_str" v1
+        carton_project_add_commit "$project_str" v1 >/dev/null
+        ep_test added -e0 carton_project_has_commit "$project_str" v1
+        carton_project_del_commit "$project_str" v1
+        ep_test removed -e1 carton_project_has_commit "$project_str" v1
+    ); ep_suite_end
+
+    ep_suite_begin get_rev_num; (
+        ep_suite_init
+        mkdir "$PROJECT_DIR"
+        ep_teardown_push rm -Rf "$PROJECT_DIR"
+        declare project_str
+        project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+        carton_project_fetch "$project_str"
+        while read -r name committish expected_rev_num; do
+            ep_suite_begin "$name"; (
+                ep_suite_init
+                carton_project_add_commit "$project_str" "$committish" \
+                                            >/dev/null
+                ep_teardown_push carton_project_del_commit "$project_str" \
+                                                           "$committish"
+
+                ep_test_begin exec; (
+                    ep_test_init
+                    carton_project_get_commit_rev_num "$project_str" \
+                                                      "$committish" >/dev/null
+                ); ep_test_end
+
+                ep_suite_begin verify; (
+                    ep_suite_init
+                    declare rev_num
+                    rev_num=`carton_project_get_commit_rev_num \
+                                    "$project_str" "$committish"`
+                    ep_test rev_num [ "$rev_num" == "$expected_rev_num" ]
+                ); ep_suite_end
+            ); ep_suite_end
+        done <<<"\
+            first_built     add_spec    -4
+            pre_v1          v1^         -6
+            v1              v1          0
+            post_v1         add_g       1
+            pre_v2_update   v2_update^  3
+            v2_update       v2_update   -4
+            post_v2_update  add_j       -5
+            pre_v2          v2^         -6
+            v2              v2          0
+            master_post_v1  add_o       3
+            v2_x_post_v1    del_i       3
+            merge_v2_1      merge_v2.1  7
+            v3_update       v3_update   -8
+            v2_1            v2.1        0"
+    ); ep_suite_end
+); ep_suite_end
+
+ep_suite_begin branch; (
+    ep_suite_init
+
+    ep_suite_begin add; (
+        ep_suite_init
+        ep_suite_begin exec; (
+            ep_suite_init
+            mkdir "$PROJECT_DIR"
+            ep_teardown_push rm -Rf "$PROJECT_DIR"
+            declare project_str
+            project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+            carton_project_fetch "$project_str"
+            ep_test do carton_project_add_branch "$project_str" master >/dev/null
+        ); ep_suite_end
+        ep_suite_begin verify; (
+            ep_suite_init
+            mkdir "$PROJECT_DIR"
+            ep_teardown_push rm -Rf "$PROJECT_DIR"
+            declare project_str
+            project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+            carton_project_fetch "$project_str"
+            declare branch_str
+            branch_str=`carton_project_add_branch "$project_str" master`
+            declare -A branch
+            carton_arr_parse branch <<<"$branch_str"
+            GIT_DIR="${branch[git_dir]}" \
+                ep_test exists \
+                        git rev-list -n1 "refs/heads/${branch[name]}" >/dev/null
+        ); ep_suite_end
+    ); ep_suite_end
+
+    ep_suite_begin get; (
+        ep_suite_init
+        ep_suite_begin exec; (
+            ep_suite_init
+            mkdir "$PROJECT_DIR"
+            ep_teardown_push rm -Rf "$PROJECT_DIR"
+            declare project_str
+            project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+            carton_project_fetch "$project_str"
+            carton_project_add_branch "$project_str" master >/dev/null
+            ep_test do carton_project_get_branch "$project_str" master >/dev/null
+        ); ep_suite_end
+        ep_suite_begin verify; (
+            ep_suite_init
+            mkdir "$PROJECT_DIR"
+            ep_teardown_push rm -Rf "$PROJECT_DIR"
+            declare project_str
+            project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+            carton_project_fetch "$project_str"
+            carton_project_add_branch "$project_str" master >/dev/null
+            declare branch_str
+            branch_str=`carton_project_get_branch "$project_str" master`
+            declare -A branch
+            carton_arr_parse branch <<<"$branch_str"
+            GIT_DIR="${branch[git_dir]}" \
+                ep_test exists \
+                        git rev-list -n1 "refs/heads/${branch[name]}" >/dev/null
+        ); ep_suite_end
+    ); ep_suite_end
+
+    ep_suite_begin del; (
+        ep_suite_init
+        ep_suite_begin exec; (
+            ep_suite_init
+            mkdir "$PROJECT_DIR"
+            ep_teardown_push rm -Rf "$PROJECT_DIR"
+            declare project_str
+            project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+            carton_project_fetch "$project_str"
+            carton_project_add_branch "$project_str" master >/dev/null
+            ep_test do carton_project_del_branch "$project_str" master
+        ); ep_suite_end
+        ep_suite_begin verify; (
+            ep_suite_init
+            mkdir "$PROJECT_DIR"
+            ep_teardown_push rm -Rf "$PROJECT_DIR"
+            declare project_str
+            project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+            carton_project_fetch "$project_str"
+            declare branch_str
+            branch_str=`carton_project_add_branch "$project_str" master`
+            declare -A branch
+            carton_arr_parse branch <<<"$branch_str"
+            carton_project_del_branch "$project_str" master
+            GIT_DIR="${branch[git_dir]}" \
+                ep_test not_exists \
+                        eval "! git rev-list -n1 refs/heads/master \
+                                        >/dev/null 2>&1"
+        ); ep_suite_end
+    ); ep_suite_end
+
+    ep_suite_begin has; (
+        ep_suite_init
+        mkdir "$PROJECT_DIR"
+        ep_teardown_push rm -Rf "$PROJECT_DIR"
+        declare project_str
+        project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+        carton_project_fetch "$project_str"
+        ep_test pristine -e 1 carton_project_has_branch "$project_str" master
+        carton_project_add_branch "$project_str" master >/dev/null
+        ep_test added -e 0 carton_project_has_branch "$project_str" master
+        carton_project_del_branch "$project_str" master
+        ep_test removed -e 1 carton_project_has_branch "$project_str" master
+    ); ep_suite_end
+
+); ep_suite_end
+
+ep_suite update test-project-update
+
+} # Workaround vim subshell syntax highlighting issue

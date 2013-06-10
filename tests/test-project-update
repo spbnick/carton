@@ -1,0 +1,375 @@
+#!/bin/bash
+#
+# carton_project.sh carton_project_update tests
+#
+# Copyright (c) 2013 Red Hat, Inc. All rights reserved.
+#
+# This copyrighted material is made available to anyone wishing
+# to use, modify, copy, or redistribute it subject to the terms
+# and conditions of the GNU General Public License version 2.
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public
+# License along with this program; if not, write to the Free
+# Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
+
+eval "`ep_env || echo false`"
+. ep.sh
+ep_suite_init "$@"
+
+declare -r DATA_DIR=`mktemp --tmpdir -d carton-test.XXXXXXXX`
+ep_teardown_push rm -Rf "$DATA_DIR"
+
+declare CARTON_DATA_DIR="$DATA_DIR/carton"
+mkdir "$CARTON_DATA_DIR"
+eval "`carton-env || echo false`"
+
+. test_git.sh
+. carton_project.sh
+
+# Create git repo
+declare -r WORK_DIR="$DATA_DIR/work"
+declare GIT_DIR="$WORK_DIR/.git"
+declare -r PROJECT_DIR="$DATA_DIR/project"
+
+# Workaround vim subshell syntax highlighting issue
+{
+
+ep_suite_begin old_new \
+               -b 'New commits are added, old are not'; (
+    ep_suite_init
+    declare -r INIT='
+        test_git_make "$WORK_DIR" commit_master_v1
+        ep_teardown_push rm -Rf "$WORK_DIR"
+
+        mkdir "$PROJECT_DIR"
+        ep_teardown_push rm -Rf "$PROJECT_DIR"
+        declare project_str
+        project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+        declare -A project
+        carton_arr_parse project <<<"$project_str"
+
+        carton_project_fetch "$project_str"
+        carton_project_add_branch "$project_str" master >/dev/null
+        carton_project_skip "$project_str"
+
+        test_git_make "$WORK_DIR" tag_v1 "*" commit_master_v1
+        carton_project_fetch "$project_str"
+    '
+
+    ep_suite_begin exec; (
+        ep_suite_init
+        eval "$INIT"
+        ep_test_begin do; (
+            ep_test_init
+            carton_project_update "$project_str"
+        ); ep_test_end
+    ); ep_suite_end
+
+    ep_suite_begin verify; (
+        ep_suite_init
+        eval "$INIT"
+        carton_project_update "$project_str"
+
+        declare c
+        declare i=1
+
+        ep_suite_begin old; (
+            ep_suite_init
+            for c in `GIT_DIR="${project[git_dir]}" \
+                        git rev-list --reverse v1_update`; do
+                ep_suite_begin "$i"; (
+                    ep_suite_init
+                    ep_test_begin "not_present"; (
+                        ep_test_init
+                        ! carton_project_has_commit "$project_str" "$c"
+                    ); ep_test_end
+                ); ep_suite_end
+                i="$((i + 1))"
+            done
+        ); ep_suite_end
+
+        ep_suite_begin new; (
+            ep_suite_init
+            for c in `GIT_DIR="${project[git_dir]}" \
+                        git rev-list --reverse ^v1_update master`; do
+                ep_suite_begin "$i"; (
+                    ep_suite_init
+
+                    ep_test_begin present; (
+                        ep_test_init
+                        carton_project_has_commit "$project_str" "$c"
+                    ); ep_test_end
+                ); ep_suite_end
+                i="$((i + 1))"
+            done
+        ); ep_suite_end
+    ); ep_suite_end
+); ep_suite_end
+
+ep_suite_begin published \
+               -b 'Commit revisions are published'; (
+    ep_suite_init
+    declare -r INIT='
+        test_git_make "$WORK_DIR" commit_master_v1
+        ep_teardown_push rm -Rf "$WORK_DIR"
+
+        mkdir "$CARTON_REPO_LIST_DIR"
+        ep_teardown_push rm -Rf "$CARTON_REPO_LIST_DIR"
+        carton_repo_list_add_repo_list devel
+
+        mkdir "$PROJECT_DIR"
+        ep_teardown_push rm -Rf "$PROJECT_DIR"
+        declare project_str
+        project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+        declare -A project
+        carton_arr_parse project <<<"$project_str"
+
+        carton_project_fetch "$project_str"
+        carton_project_add_branch "$project_str" master "devel" >/dev/null
+        carton_project_skip "$project_str"
+
+        test_git_make "$WORK_DIR" commit_master_spec "*" commit_master_v1
+        carton_project_fetch "$project_str"
+    '
+
+    ep_suite_begin exec; (
+        ep_suite_init
+        eval "$INIT"
+        ep_test_begin do; (
+            ep_test_init
+            carton_project_update "$project_str"
+        ); ep_test_end
+    ); ep_suite_end
+
+    ep_suite_begin verify; (
+        ep_suite_init
+        eval "$INIT"
+        carton_project_update "$project_str"
+
+        ep_test_begin present; (
+            ep_test_init
+            carton_project_has_commit "$project_str" add_spec
+        ); ep_test_end
+
+        ep_test_begin gettable; (
+            ep_test_init
+            carton_project_get_commit "$project_str" add_spec >/dev/null
+        ); ep_test_end
+
+        declare commit_str
+        commit_str=`carton_project_get_commit "$project_str" add_spec`
+        declare -A commit
+        carton_arr_parse commit <<<"$commit_str"
+        ep_test built "${commit[is_built]}"
+
+        ep_suite_begin rev; (
+            ep_suite_init
+
+            declare rev_num
+            rev_num=`carton_project_get_commit_rev_num \
+                        "$project_str" add_spec`
+
+            ep_test_begin gettable; (
+                ep_test_init
+                carton_commit_get_rev "$commit_str" "$rev_num" >/dev/null
+            ); ep_test_end
+
+            declare rev_str
+            rev_str=`carton_commit_get_rev "$commit_str" "$rev_num"`
+            declare -A rev
+            carton_arr_parse rev <<<"$rev_str"
+
+            ep_test built "${rev[is_built]}"
+
+            declare repo_str
+            repo_str=`carton_repo_list_get_repo devel`
+            ep_test_begin published; (
+                ep_test_init
+                carton_repo_is_published "$repo_str" "$rev_str"
+            ); ep_test_end
+        ); ep_suite_end
+    ); ep_suite_end
+); ep_suite_end
+
+ep_suite_begin max_age \
+               -b 'Commits after max age are added, before are not'; (
+    ep_suite_init
+    declare -r INIT='
+        test_git_make "$WORK_DIR" commit_master_pre_build
+        ep_teardown_push rm -Rf "$WORK_DIR"
+
+        mkdir "$PROJECT_DIR"
+        ep_teardown_push rm -Rf "$PROJECT_DIR"
+        declare project_str
+        project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+        declare -A project
+        carton_arr_parse project <<<"$project_str"
+
+        carton_project_fetch "$project_str"
+        carton_project_add_branch "$project_str" master >/dev/null
+        carton_project_skip "$project_str"
+
+        test_git_make "$WORK_DIR" commit_master_v1 "*" commit_master_pre_build
+        sleep 2
+        carton_project_set_update_max_age "$project_str" "@`date +%s`"
+        sleep 2
+        test_git_make "$WORK_DIR" commit_master_spec "*" commit_master_v1
+        carton_project_fetch "$project_str"
+    '
+
+    ep_suite_begin exec; (
+        ep_suite_init
+        eval "$INIT"
+        ep_test_begin do; (
+            ep_test_init
+            carton_project_update "$project_str"
+        ); ep_test_end
+    ); ep_suite_end
+
+    ep_suite_begin verify; (
+        ep_suite_init
+        eval "$INIT"
+        carton_project_update "$project_str"
+
+        ep_test_begin before; (
+            ep_test_init
+            ! carton_project_has_commit "$project_str" add_build
+        ); ep_test_end
+
+        ep_test_begin after; (
+            ep_test_init
+            carton_project_has_commit "$project_str" add_spec
+        ); ep_test_end
+    ); ep_suite_end
+); ep_suite_end
+
+ep_suite_begin branches \
+               -b 'New commits from all branches are added'; (
+    ep_suite_init
+    declare -r INIT='
+        test_git_make "$WORK_DIR" merge_v2_master
+        ep_teardown_push rm -Rf "$WORK_DIR"
+
+        mkdir "$PROJECT_DIR"
+        ep_teardown_push rm -Rf "$PROJECT_DIR"
+        declare project_str
+        project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+        declare -A project
+        carton_arr_parse project <<<"$project_str"
+
+        carton_project_fetch "$project_str"
+        carton_project_add_branch "$project_str" master >/dev/null
+        carton_project_add_branch "$project_str" v2.x >/dev/null
+        carton_project_skip "$project_str"
+
+        test_git_make "$WORK_DIR" commit_master_v3 "*" merge_v2_master
+        carton_project_fetch "$project_str"
+    '
+
+    ep_suite_begin exec; (
+        ep_suite_init
+        eval "$INIT"
+        ep_test_begin do; (
+            ep_test_init
+            carton_project_update "$project_str"
+        ); ep_test_end
+    ); ep_suite_end
+
+    ep_suite_begin verify; (
+        ep_suite_init
+        eval "$INIT"
+        carton_project_update "$project_str"
+
+        ep_test_begin master; (
+            ep_test_init
+            carton_project_has_commit "$project_str" master
+        ); ep_test_end
+
+        ep_test_begin v2_x; (
+            ep_test_init
+            carton_project_has_commit "$project_str" v2.x
+        ); ep_test_end
+    ); ep_suite_end
+); ep_suite_end
+
+ep_suite_begin new_tags \
+               -b 'Commits affected by new tags are added, others are not'; (
+    ep_suite_init
+    declare -r INIT='
+        test_git_make "$WORK_DIR" commit_master_post_v1 "!(tag_v1)"
+        ep_teardown_push rm -Rf "$WORK_DIR"
+
+        mkdir "$PROJECT_DIR"
+        ep_teardown_push rm -Rf "$PROJECT_DIR"
+        declare project_str
+        project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
+        declare -A project
+        carton_arr_parse project <<<"$project_str"
+
+        carton_project_fetch "$project_str"
+        carton_project_add_branch "$project_str" master >/dev/null
+        carton_project_skip "$project_str"
+
+        test_git_make "$WORK_DIR" commit_master_post_v1 "tag_v1"
+        carton_project_fetch "$project_str"
+    '
+
+    ep_suite_begin exec; (
+        ep_suite_init
+        eval "$INIT"
+        ep_test_begin do; (
+            ep_test_init
+            carton_project_update "$project_str"
+        ); ep_test_end
+    ); ep_suite_end
+
+    ep_suite_begin verify; (
+        ep_suite_init
+        eval "$INIT"
+
+        declare c
+        declare i
+
+        for c in `GIT_DIR="${project[git_dir]}" git rev-list master`; do
+            ! carton_project_has_commit "$project_str" "$c"
+        done
+
+        carton_project_update "$project_str"
+
+        i=0
+        for c in `GIT_DIR="${project[git_dir]}" \
+                    git rev-list --reverse ^v1^ master`; do
+            ep_suite_begin "$i"; (
+                ep_suite_init
+
+                ep_test_begin present; (
+                    ep_test_init
+                    carton_project_has_commit "$project_str" "$c"
+                ); ep_test_end
+            ); ep_suite_end
+            i="$((i + 1))"
+        done
+
+        i=-1
+        for c in `GIT_DIR="${project[git_dir]}" \
+                    git rev-list v1^`; do
+            ep_suite_begin "$i"; (
+                ep_suite_init
+
+                ep_test_begin not_present; (
+                    ep_test_init
+                    ! carton_project_has_commit "$project_str" "$c"
+                ); ep_test_end
+            ); ep_suite_end
+            i="$((i - 1))"
+        done
+    ); ep_suite_end
+); ep_suite_end
+
+} # Workaround vim subshell syntax highlighting issue
