@@ -24,8 +24,8 @@ dist_noinst_DATA = \
 dist_noinst_SCRIPTS = \
     test-all            \
     test-branch         \
-    test-channel		\
-    test-channel-list	\
+    test-channel        \
+    test-channel-list   \
     test-commit         \
     test-project        \
     test-project-update \
