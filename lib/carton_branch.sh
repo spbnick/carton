@@ -64,6 +64,8 @@ function carton_branch_init()
     GIT_DIR="${branch[git_dir]}" \
         git config "branch.${branch[name]}.carton-channel-list" \
                    "$channel_list_str"
+    GIT_DIR="${branch[git_dir]}" \
+        git config "branch.${branch[name]}.carton-tag-list" ""
     carton_arr_print branch
 }
 
@@ -120,6 +122,21 @@ function carton_branch_set_channel_list()
     declare -r channel_list_str="$1";   shift
     carton_assert 'carton_channel_list_is_valid "$channel_list_str"'
     _carton_branch_config_set "$branch_str" "channel-list" "$channel_list_str"
+}
+
+# Get a branch tag list.
+# Args: branch_str
+# Output: tag list string
+function carton_branch_get_tag_list()
+{
+    _carton_branch_config_get "$1" "tag-list"
+}
+
+# Set a branch tag list.
+# Args: branch_str tag_list_str
+function carton_branch_set_tag_list()
+{
+    _carton_branch_config_set "$1" "tag-list" "$2"
 }
 
 fi # _CARTON_BRANCH_SH
