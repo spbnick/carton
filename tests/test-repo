@@ -57,7 +57,10 @@ ep_suite_begin init; (
         ep_suite_init
         mkdir "$REPO_DIR"
         ep_teardown_push rm -Rf "$REPO_DIR"
-        ep_test do carton_repo_init "$REPO_DIR" >/dev/null
+        ep_test_begin do; (
+            ep_test_init
+            carton_repo_init "$REPO_DIR" >/dev/null
+        ); ep_test_end
     ); ep_suite_end
 
     ep_suite_begin verify; (
@@ -102,7 +105,10 @@ ep_suite_begin publish; (
         ep_teardown_push rm -Rf "$REPO_DIR"
         declare repo_str
         repo_str=`carton_repo_init "$REPO_DIR"`
-        ep_test do carton_repo_publish "$repo_str" "$rev_str"
+        ep_test_begin do; (
+            ep_test_init
+            carton_repo_publish "$repo_str" "$rev_str"
+        ); ep_test_end
     ); ep_suite_end
 
     ep_suite_begin verify; (
@@ -129,7 +135,10 @@ ep_suite_begin withdraw; (
         declare repo_str
         repo_str=`carton_repo_init "$REPO_DIR"`
         carton_repo_publish "$repo_str" "$rev_str"
-        ep_test do carton_repo_withdraw "$repo_str" "$rev_str"
+        ep_test_begin do; (
+            ep_test_init
+            carton_repo_withdraw "$repo_str" "$rev_str"
+        ); ep_test_end
     ); ep_suite_end
 
     ep_suite_begin verify; (
@@ -155,9 +164,15 @@ ep_suite_begin is_published; (
     ep_teardown_push rm -Rf "$REPO_DIR"
     declare repo_str
     repo_str=`carton_repo_init "$REPO_DIR"`
-    ep_test false -e 1 carton_repo_is_published "$repo_str" "$rev_str"
+    ep_test_begin false -e 1; (
+        ep_test_init
+        carton_repo_is_published "$repo_str" "$rev_str"
+    ); ep_test_end
     carton_repo_publish "$repo_str" "$rev_str"
-    ep_test true -e 0 carton_repo_is_published "$repo_str" "$rev_str"
+    ep_test_begin true -e 0; (
+        ep_test_init
+        carton_repo_is_published "$repo_str" "$rev_str"
+    ); ep_test_end
 ); ep_suite_end
 
 } # Workaround vim subshell syntax highlighting issue
