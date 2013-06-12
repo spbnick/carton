@@ -24,6 +24,51 @@ declare _CARTON_SH=
 . carton_project_list.sh
 . carton_repo_list.sh
 
+declare -r CARTON_LOCK_FILE="$CARTON_DATA_DIR/lock.pid"
+declare -r CARTON_LOCK_TIMEOUT="10 minutes"
+declare -r CARTON_LOCK_INTERVAL="5s"
+
+# Lock the data directory on behalf of the current shell.
+function carton_lock()
+{
+    declare deadline
+    deadline=`date --date="$CARTON_LOCK_TIMEOUT" +%s`
+
+    # Spin-lock
+    while ! ( set -o noclobber && echo $$ >"$CARTON_LOCK_FILE" ) 2>/dev/null; do
+        if ((`date +%s` > deadline)); then
+            return 1
+        fi
+        sleep "$CARTON_LOCK_INTERVAL"
+    done
+}
+
+# Check if the data directory is locked.
+function carton_locked()
+{
+    [ -f "$CARTON_LOCK_FILE" ]
+}
+
+# Check if the data directory is locked by the current shell.
+function carton_owned()
+{
+    [ "$$" == `< "$CARTON_LOCK_FILE"` ] 2>/dev/null
+}
+
+# Unlock the data directory locked by the current shell.
+function carton_unlock()
+{
+    carton_assert 'carton_owned'
+    rm "$CARTON_LOCK_FILE"
+}
+
+# Unlock the data directory locked by any shell.
+function carton_breakin()
+{
+    carton_assert 'carton_locked'
+    rm "$CARTON_LOCK_FILE"
+}
+
 # Initialize data directory.
 function carton_init()
 {
