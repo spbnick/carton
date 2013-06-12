@@ -30,7 +30,10 @@ declare -r _CARTON_REPO_LOAD_BASE='
 
     declare -A repo=(
         [dir]="$dir"
-        [rpm_dir]="$dir/rpm"
+        [rpm_link]="$dir/rpm"
+        [rpm_old]="$dir/rpm.old"
+        [rpm_cur]="$dir/rpm.cur"
+        [rpm_log]="$dir/rpm.log"
     )
 '
 
@@ -40,8 +43,9 @@ declare -r _CARTON_REPO_LOAD_BASE='
 function carton_repo_init()
 {
     eval "$_CARTON_REPO_LOAD_BASE"
-    mkdir "${repo[rpm_dir]}"
-    createrepo --quiet "${repo[rpm_dir]}"
+    mkdir "${repo[rpm_cur]}"
+    createrepo --quiet "${repo[rpm_cur]}"
+    ln -s "${repo[rpm_cur]}" "${repo[rpm_link]}"
     carton_arr_print repo
 }
 
@@ -72,7 +76,7 @@ function carton_repo_is_published()
     eval "$_CARTON_REPO_GET_REPO_AND_REV"
     declare f
     while read -r f; do
-        if ! [ -e "${repo[rpm_dir]}/$f" ]; then
+        if ! [ -e "${repo[rpm_link]}/$f" ]; then
             return 1
         fi
     done < <(
@@ -85,30 +89,99 @@ function carton_repo_is_published()
 # TODO Atomic publishing/withdrawing
 #
 
+# Update repo with a revision atomically, executing specified command with
+# repo_str and rev_str arguments.
+# Args: command repo_str rev_str
+function _carton_repo_update()
+{
+    declare -r command="$1";    shift
+    declare -r repo_str="$1";   shift
+    declare -r rev_str="$1";    shift
+    declare -A repo
+    declare status
+    carton_arr_parse repo <<<"$repo_str"
+
+    set +o errexit
+    (
+        echo -n "Start: "
+        date --rfc-2822
+        set +o errexit
+        (
+            set -o errexit -o xtrace
+            declare f
+            shopt -s nullglob
+
+            # Move to a copy of current repo atomically
+            mkdir "${repo[rpm_old]}"
+            cp -a "${repo[rpm_cur]}/repodata" "${repo[rpm_old]}"
+            for f in "${repo[rpm_cur]}"/*.rpm; do
+                ln "${repo[rpm_cur]}"/*.rpm "${repo[rpm_old]}"
+                break
+            done
+            ln -s "${repo[rpm_old]}" "${repo[rpm_link]}".new
+            mv -T "${repo[rpm_link]}"{.new,}
+
+            # Update
+            "$command" "$repo_str" "$rev_str"
+
+            # Update metadata
+            createrepo --update "${repo[rpm_old]}"
+
+            # Move to the updated repo atomically
+            ln -s "${repo[rpm_cur]}" "${repo[rpm_link]}".new
+            mv -T "${repo[rpm_link]}"{.new,}
+
+            # Remove old repo
+            rm -R "${repo[rpm_old]}"
+        )
+        status="$?"
+        set -o errexit
+        echo -n "End: "
+        date --rfc-2822
+        exit "$status"
+    ) > "${repo[rpm_log]}" 2>&1
+}
+
+# Add revision packages to a repo directory.
+# Args: repo_str rev_str
+function _carton_repo_add()
+{
+    eval "$_CARTON_REPO_GET_REPO_AND_REV"
+    find "${rev[rpm_dir]}" -name "*.rpm" -print0 |
+        xargs -0 cp -t "${repo[rpm_cur]}"
+}
+
+# Remove revision packages from a repo directory.
+# Args: repo_str rev_str
+function _carton_repo_del()
+{
+    eval "$_CARTON_REPO_GET_REPO_AND_REV"
+    declare f
+    while IFS= read -r f; do
+        rm "${repo[rpm_cur]}/$f"
+    done < <(
+        find "${rev[rpm_dir]}" -name "*.rpm" -printf "%f\\n"
+    )
+}
+
 # Publish a commit revision in a repo.
 # Args: repo_str rev_str
 function carton_repo_publish()
 {
-    eval "$_CARTON_REPO_GET_REPO_AND_REV"
+    declare -r repo_str="$1"; shift
+    declare -r rev_str="$1"; shift
     carton_assert '! carton_repo_is_published "$repo_str" "$rev_str"'
-    find "${rev[rpm_dir]}" -name "*.rpm" -print0 |
-        xargs -0 cp -t "${repo[rpm_dir]}"
-    createrepo --quiet --update "${repo[rpm_dir]}"
+    _carton_repo_update _carton_repo_add "$repo_str" "$rev_str"
 }
 
 # Withdraw (remove) a commit revision from a repo.
 # Args: repo_str rev_str
 function carton_repo_withdraw()
 {
-    eval "$_CARTON_REPO_GET_REPO_AND_REV"
+    declare -r repo_str="$1"; shift
+    declare -r rev_str="$1"; shift
     carton_assert 'carton_repo_is_published "$repo_str" "$rev_str"'
-    declare f
-    while read -r f; do
-        rm "${repo[rpm_dir]}/$f"
-    done < <(
-        find "${rev[rpm_dir]}" -name "*.rpm" -printf '%f\n'
-    )
-    createrepo --quiet --update "${repo[rpm_dir]}"
+    _carton_repo_update _carton_repo_del "$repo_str" "$rev_str"
 }
 
 fi # _CARTON_REPO_SH
