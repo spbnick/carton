@@ -135,8 +135,9 @@ function carton_arr_print()
     declare _v
     eval "
         for _k in \"\${!$_var[@]}\"; do
-            _k=\"\${_k//\$_bs/\$_bs\$_bs}\"
-            _v=\"\${$_var[\$_k]//\$_bs/\$_bs\$_bs}\"
+            _v=\"\${$_var[\$_k]}\"
+            _k=\"\${_k//\\\\/\$_bs\$_bs}\"
+            _v=\"\${_v//\\\\/\$_bs\$_bs}\"
             echo \"\${_k//\$'\\n'/\\\\n}\"
             echo \"\${_v//\$'\\n'/\\\\n}\"
         done
@@ -151,16 +152,13 @@ function carton_arr_parse()
 {
     declare -r _var="$1"
     carton_assert 'carton_is_valid_var_name "$_var"'
-    declare -r _bs='\'
     declare _k
     declare _v
     eval "
         while IFS='' read -r _k; do
             IFS='' read -r _v || break
-            _k=\"\${_k//\\\\n/\$'\\n'}\"
-            _v=\"\${_v//\\\\n/\$'\\n'}\"
-            _k=\"\${_k//\$_bs\$_bs/\$_bs}\"
-            _v=\"\${_v//\$_bs\$_bs/\$_bs}\"
+            printf -v _k '%b' \"\$_k\"
+            printf -v _v '%b' \"\$_v\"
             $_var[\$_k]=\"\$_v\"
         done
     "
