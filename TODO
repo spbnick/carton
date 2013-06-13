@@ -1,16 +1,27 @@
 Validate variable name prefixes as they're passed to functions.
+
 Initialize new installation with carton_init
+
 Use single quotes around assertions in non-evaled code everywhere.
+
 Put actual simple descriptions at the start of modules instead of just object
 names.
+
 Consider naming object "strings" "handles" or something similar instead.
+
 Put only unchangeable, identification data in the "handles".
+
 Consider not accessing "handle" contents directly outside the module, but
 using accessor functions instead.
+
 Consider reversing the meaning: make "handles" be "objects" themselves and
 name whatever they unpack to specifically.
+
 Verify variable type in carton_arr_parse/print
+
 Add commit hash to revision identifier so that revisions with the same number
 from different merged branches do not conflict.
+
 Switch to using ep_test_sh/ep_suite_sh, where appropriate.
+
 Consider doing assertions between argument assignment and initial macros.
