@@ -1,0 +1,525 @@
+#!/bin/bash
+#
+# Execute carton commands
+#
+# Copyright (c) 2013 Red Hat, Inc. All rights reserved.
+#
+# This copyrighted material is made available to anyone wishing
+# to use, modify, copy, or redistribute it subject to the terms
+# and conditions of the GNU General Public License version 2.
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public
+# License along with this program; if not, write to the Free
+# Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
+
+set -o errexit -o nounset -o pipefail
+shopt -s extdebug
+eval "`carton-env || echo exit 1`"
+. carton_util.sh
+
+# Description-parsing function interface.
+# Args: index summary name [spec_arg...]
+# Output: description associative array string
+
+# Parse a description list text.
+#
+# Each description is terminated with a dot on a line by itself, empty lines
+# between descriptions are ignored. Each description starts with specification
+# line, which starts with ID and is followed by optional arguments, followed
+# by one or more summary lines.
+#
+# Args: parse_desc
+# Input: description list text
+# Output: description associative array string, with names as the
+#         keys and the output of parse_desc as the values
+function parse_desc_text()
+{
+    declare -r parse_desc="$1";     shift
+    declare -A map=()
+    declare line
+    declare index=0
+    declare spec=
+    declare summary=
+    declare -a spec_array
+
+    while read -r line; do
+        if [ -z "$spec" ]; then
+            if [ -z "$line" ]; then
+                continue
+            else
+                carton_assert '[ "$line" != "." ]'
+                spec="$line"
+            fi
+        else
+            if [ "$line" != "." ]; then
+                summary="${summary:+$summary$'\n'}$line"
+            else
+                read -r -a spec_array <<<"$spec"
+                map[${spec_array[0]}]=`
+                    "$parse_desc" "$index" "$summary" "${spec_array[@]}"`
+                index=$((index + 1))
+                spec=
+                summary=
+            fi
+        fi
+    done < <(carton_unindent)
+
+    carton_arr_print map
+}
+
+# Parse option description.
+# Args: index summary id short long type [value]
+# Output: description associative array string
+function parse_opt_desc()
+{
+    declare -r arg_num="$#"
+    carton_assert '((arg_num >= 6 && arg_num <= 7))'
+    declare -A spec=(
+        [index]="$1"
+        [summary]="$2"
+        [short]="$4"
+        [long]="$5"
+        [type]="$6"
+        [value]="${7-}"
+    )
+    carton_arr_print spec
+}
+
+# Parse argument description.
+# Args: index summary id [name [type]]
+# Output: specification associative array string
+function parse_arg_desc()
+{
+    declare -r arg_num="$#"
+    carton_assert '((arg_num >= 3 && arg_num <= 5))'
+    declare -A spec=(
+        [summary]="$2"
+        [name]="${4-$3}"
+        [type]="${5-$3}"
+    )
+    carton_arr_print spec
+}
+
+# Parse command specification arguments.
+# Args: index summary id [opt...] [-- [arg...] [(? arg...)...|* arg]]
+# Output: specification associative array string
+function parse_cmd_desc()
+{
+    declare -r arg_num="$#"
+    carton_assert '((arg_num >= 3))'
+    declare index="$1";     shift
+    declare summary="$1";   shift
+    shift
+
+    declare -a opt_list=()
+    declare -a arg_spec_list=()
+    declare arg
+    declare -A spec=()
+
+    while [ $# != 0 ]; do
+        arg="$1"
+        shift
+        if [ "$arg" == "--" ]; then
+            break
+        else
+            opt_list+=("$arg")
+        fi
+    done
+    arg_spec_list=("$@")
+
+    spec=(
+        [index]="$index"
+        [summary]="$summary"
+        [opt_list]=`carton_arr_print opt_list`
+        [arg_spec_list]=`carton_arr_print arg_spec_list`
+    )
+    carton_arr_print spec
+}
+
+# Text describing available options.
+#
+# Each description is terminated with a dot on a line by itself, empty lines
+# between descriptions are ignored. Each description starts with specification
+# line, followed by one or more summary lines.
+#
+# Specification format: opt short long type [value]
+#
+declare -r OPT_DESC_TEXT="
+    assume_yes      y assume-yes        bool
+    Assume affirmative answer to any interactive questions.
+    .
+    tag_glob        g tag-glob          string      GLOB
+    Set GLOB version tag glob pattern.
+    .
+    tag_format      f tag-format        string      FORMAT
+    Set FORMAT version tag printf format. Can contain
+    a single format specifier for version argument.
+    .
+    update_max_age  u update-max-age    string      DATE
+    Set DATE maximum age of commits to be updated,
+    in 'date' '-d' option format.
+    .
+"
+
+# Text describing available arguments.
+#
+# Each description is terminated with a dot on a line by itself, empty lines
+# between descriptions are ignored. Each description starts with specification
+# line, followed by one or more summary lines.
+#
+# Specification format: arg [name [type]]
+#
+declare -r ARG_DESC_TEXT="
+    repo_new        repo_name
+    New repo name. A repo with such name should not exist.
+    .
+    repo_pattern
+    An extended glob pattern matching a repo name.
+    .
+
+    project_new     project_name
+    New project name.
+    A project with such name should not exist.
+    .
+    project_old     project_name
+    An existing project name.
+    .
+    project_pattern
+    An extended glob pattern matching a project name.
+    .
+    git_repo
+    A Git repo location.
+    .
+
+    branch_new      branch_name
+    New branch name.
+    A tracked branch with such name should not exist.
+    .
+    branch_old      branch_name
+    An existing branch name.
+    .
+    branch_pattern
+    An extended glob pattern matching a branch name.
+    .
+
+    channel
+    A publishing channel, in repo_name[/version_pattern] format.
+    .
+"
+
+# Text describing available commands.
+#
+# Each description is terminated with a dot on a line by itself, empty lines
+# between descriptions are ignored. Each description starts with specification
+# line, followed by one or more summary lines.
+#
+# Specification format: cmd [opt...] [-- [arg...] [(? arg...)...|* arg]]
+# 
+declare -r CMD_DESC_TEXT="
+    cleanup             assume_yes
+    Cleanup data directory.
+    .
+    init
+    Initialize data directory.
+    .
+
+    repo-add            -- * repo_new
+    Add a new repo.
+    .
+    repo-del            -- * repo_pattern
+    Delete repos matching a pattern.
+    .
+    repo-list           -- * repo_pattern
+    List repos.
+    .
+
+    project-add         tag_glob tag_format update_max_age -- project_new git_repo
+    Add a new project.
+    .
+    project-del         assume_yes -- * project_pattern
+    Delete projects matching a pattern.
+    .
+    project-fetch       -- * project_pattern
+    Fetch from remote repos of projects matching a pattern.
+    .
+    project-list        -- * project_pattern
+    List projects.
+    .
+    project-skip        -- * project_pattern
+    Skip new revisions of projects matching a pattern.
+    .
+    project-update      -- * project_pattern
+    Publish new revisions of projects matching a pattern.
+    .
+
+    branch-add          -- project_old branch_new * channel
+    Add a tracked branch.
+    .
+    branch-del          assume_yes -- project_old branch_pattern
+    Delete tracked branches matching a pattern.
+    .
+    branch-list         -- project_old * branch_pattern
+    List tracked branches of projects matching a pattern.
+    .
+    branch-skip         -- project_old branch_pattern
+    Skip new revisions of branches matching a pattern.
+    .
+    branch-update       -- project_old branch_pattern
+    Publish new revisions of branches matching a pattern.
+    .
+    branch-get-channels -- project_old branch_old
+    Output branch publishing channel list.
+    .
+    branch-set-channels -- project_old branch_old * channel
+    Set branch publishing channel list.
+    .
+"
+
+declare ARG_MAP_STR
+declare -A ARG_MAP
+ARG_MAP_STR=`parse_desc_text parse_arg_desc <<<"$ARG_DESC_TEXT"`
+carton_arr_parse ARG_MAP <<<"$ARG_MAP_STR"
+
+declare OPT_MAP_STR
+declare -A OPT_MAP
+OPT_MAP_STR=`parse_desc_text parse_opt_desc <<<"$OPT_DESC_TEXT"`
+carton_arr_parse OPT_MAP <<<"$OPT_MAP_STR"
+
+declare CMD_MAP_STR
+declare -A CMD_MAP
+CMD_MAP_STR=`parse_desc_text parse_cmd_desc <<<"$CMD_DESC_TEXT"`
+carton_arr_parse CMD_MAP <<<"$CMD_MAP_STR"
+declare -a CMD_LIST=()
+declare name
+declare -A desc
+for name in "${!CMD_MAP[@]}"; do
+    carton_arr_parse desc <<<"${CMD_MAP[$name]}"
+    CMD_LIST[${desc[index]}]="$name"
+done
+
+# Output options part of global usage information.
+function usage_options()
+{
+    carton_unindent <<<"\
+        Global options:
+            -h, --help  Output global options and commands and exit.
+    "
+}
+
+# Output global usage information.
+function usage()
+{
+    declare name
+    declare width
+    declare -A desc
+    declare line
+
+    carton_unindent <<<"\
+        Usage: `basename \"\$0\"` [GLOBAL_OPTION...] COMMAND [COMMAND_ARG...]
+        Execute a Carton build server command.
+    "
+    usage_options
+    echo "Commands:"
+    width=0
+
+    for name in "${CMD_LIST[@]}"; do
+        ((width = ${#name} > width ? ${#name} : width))
+    done
+
+    width=$(((width / 4 + 1) * 4))
+
+    for name in "${CMD_LIST[@]}"; do
+        carton_arr_parse desc <<<"${CMD_MAP[$name]}"
+        while IFS= read -r line; do
+            printf "    %-${width}s%s\\n" "$name" "$line"
+            name=""
+        done <<<"${desc[summary]}"
+    done
+
+    echo
+    echo "Use \"`basename \"\$0\"` COMMAND --help\"" \
+         "to output COMMAND options and arguments."
+}
+
+# Output a command usage information.
+# Args: name
+function command_usage()
+{
+    declare -r name="$1"
+    carton_assert '[ -n "${CMD_MAP[$name]+set}" ]'
+    declare desc_str
+    declare -A desc
+    declare -a opt_list
+    declare -A opt_head_map=()
+    declare -a arg_spec_list
+    declare -a arg_list=()
+    declare help_head="-h, --help"
+    declare help_summary="Output command options and arguments and exit."
+    declare width=0
+
+    desc_str="${CMD_MAP[$name]}"
+    carton_arr_parse desc <<<"$desc_str"
+    carton_arr_parse opt_list <<<"${desc[opt_list]}"
+    carton_arr_parse arg_spec_list <<<"${desc[arg_spec_list]}"
+
+    echo -n "Usage: `basename \"\$0\"` [GLOBAL_OPTION]... $name [OPTION]..."
+
+    # Build option description headers, accumulate maximum width
+    width="${#help_head}"
+    if [ "${#opt_list[@]}" != 0 ]; then
+        declare opt
+        declare -A opt_desc
+        declare opt_head
+        for opt in "${opt_list[@]}"; do
+            carton_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
+            carton_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
+            opt_head="-${opt_desc[short]}, --${opt_desc[long]}"
+            opt_head+="${opt_desc[value]:+=${opt_desc[value]}}"
+            width=$((${#opt_head} > width ? ${#opt_head} : width))
+            opt_head_map[$opt]="$opt_head"
+        done
+    fi
+
+    # Mention arguments, accumulate maximum width
+    if [ "${#arg_spec_list[@]}" != 0 ]; then
+        declare got_star=false
+        declare bracket_depth=0
+        declare arg_spec
+        declare prev_arg_spec=""
+        for arg_spec in "${arg_spec_list[@]}"; do
+            if [[ "$arg_spec" == [*?] ]]; then
+                carton_assert '! "$got_star"'
+                if [ "$arg_spec" == "*" ]; then
+                    got_star=true
+                elif [ "$arg_spec" == "?" ]; then
+                    carton_assert '[ "$prev_arg_spec" != "?" ]'
+                fi
+                bracket_depth=$((bracket_depth + 1))
+                echo -n " ["
+            else
+                declare -A arg_desc
+                carton_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
+                carton_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
+                width=$((${#arg_desc[name]} > width
+                                ? ${#arg_desc[name]}
+                                : width))
+                if [[ "$prev_arg_spec" == [*?] ]]; then
+                    echo -n "${arg_desc[name]^^}"
+                else
+                    echo -n " ${arg_desc[name]^^}"
+                fi
+            fi
+            prev_arg_spec="$arg_spec"
+        done
+        for ((; bracket_depth > 0; bracket_depth--)); do
+            echo -n "]"
+        done
+        if "$got_star"; then
+            echo -n "..."
+        fi
+    fi
+
+    echo
+
+    # Round width up to multiple of 4
+    width=$(((width / 4 + 1) * 4))
+
+    # Output summary and global options
+    echo "${desc[summary]}"
+    echo
+    usage_options
+
+    # Output options
+    echo "Options:"
+    printf "    %-${width}s%s\\n" "$help_head" "$help_summary"
+    if [ "${#opt_list[@]}" != 0 ]; then
+        declare opt
+        declare -A opt_desc
+        declare opt_head
+        for opt in "${opt_list[@]}"; do
+            carton_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
+            carton_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
+            opt_head="${opt_head_map[$opt]}"
+            while IFS= read -r line; do
+                printf "    %-${width}s%s\\n" "$opt_head" "$line"
+                opt_head=""
+            done <<<"${opt_desc[summary]}"
+        done
+    fi
+    echo
+
+    # Output arguments
+    if [ "${#arg_spec_list[@]}" != 0 ]; then
+        declare arg_spec
+        echo "Arguments:"
+        for arg_spec in "${arg_spec_list[@]}"; do
+            if [[ "$arg_spec" != [*?] ]]; then
+                declare -A arg_desc
+                declare arg_name
+                carton_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
+                carton_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
+                arg_name="${arg_desc[name]}"
+                while IFS= read -r line; do
+                    printf "    %-${width}s%s\\n" "${arg_name^^}" "$line"
+                    arg_name=""
+                done <<<"${arg_desc[summary]}"
+            fi
+        done
+        echo
+    fi
+}
+
+# Execute a command
+# Args: name [arg]...
+function command()
+{
+    declare -r name="$1"
+
+    if [ -z "${CMD_MAP[$name]+set}" ]; then
+        echo "Unknown command \"$name\"." >&2
+        usage >&2
+        exit 1
+    fi
+
+    command_usage "$name"
+}
+
+#
+# Main routine
+#
+
+# Make sure getopt compatibility isn't enforced
+unset GETOPT_COMPATIBLE
+# Check if getopt is enhanced and supports quoting
+if getopt --test >/dev/null; [ $? != 4 ]; then
+    carton_abort 0 Enhanced getopt not found
+fi
+
+declare args_expr
+args_expr=`getopt --name \`basename "\$0"\` \
+                  --options +h \
+                  --longoptions help \
+                  -- "$@"`
+eval set -- "$args_expr"
+while true; do
+    case "$1" in
+        -h|--help)
+            usage; exit 0;;
+        --) shift; break;;
+        *) carton_abort 0 "Unknown option: $1";;
+    esac
+done
+
+if [ $# == 0 ]; then
+    echo "Command not specified." >&2
+    usage >&2
+    exit 1
+fi
+
+command "$@"

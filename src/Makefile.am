@@ -16,6 +16,7 @@
 # Boston, MA 02110-1301, USA.
 
 dist_bin_SCRIPTS = \
+    carton \
     carton-env
 
 CARTON_LIB_DIR = $(pkgdatadir)
