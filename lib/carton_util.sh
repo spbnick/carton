@@ -125,7 +125,7 @@ function carton_arr_copy()
 # Output an (associative) array.
 # Args: _var
 # Output: the array with keys and values on separate lines with newlines
-#         and backslashes escaped
+#         and backslashes escaped, terminated by a "*"
 function carton_arr_print()
 {
     declare -r _var="$1"
@@ -141,13 +141,15 @@ function carton_arr_print()
             echo \"\${_k//\$'\\n'/\\\\n}\"
             echo \"\${_v//\$'\\n'/\\\\n}\"
         done
+        echo \"*\"
     "
 }
 
 # Parse an (associative) array from a format output by carton_arr_print.
 # Args: _var
 # Input: the array in carton_arr_print output format: keys and values on
-#        separate lines with newlines and backslashes escaped
+#        separate lines with newlines and backslashes escaped, terminated by a
+#        "*".
 function carton_arr_parse()
 {
     declare -r _var="$1"
@@ -155,7 +157,7 @@ function carton_arr_parse()
     declare _k
     declare _v
     eval "
-        while IFS='' read -r _k; do
+        while IFS='' read -r _k && [ \"\$_k\" != \"*\" ]; do
             IFS='' read -r _v || break
             printf -v _k '%b' \"\$_k\"
             printf -v _v '%b' \"\$_v\"
