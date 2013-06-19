@@ -27,5 +27,6 @@ make install DESTDIR=%{buildroot}
 %doc
 %{_bindir}/%{name}*
 %{_localstatedir}/lib/carton
+%{_datadir}/%{name}
 
 %changelog
