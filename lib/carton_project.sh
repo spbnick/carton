@@ -386,7 +386,9 @@ function _carton_project_update_commit()
         return 0
     fi
 
-    carton_channel_list_publish_if_applicable "$channel_list" "$rev_str"
+    if carton_channel_list_is_applicable "$channel_list" "$rev_str"; then
+        carton_channel_list_ensure_published "$channel_list" "$rev_str"
+    fi
 }
 
 # Publish new revisions for project commits (specified via "git rev-list"

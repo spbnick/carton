@@ -76,6 +76,19 @@ function carton_channel_publish()
     carton_repo_publish "$repo_str" "$rev_str"
 }
 
+# Ensure a revision is published in a channel, i.e. publish, if it isn't.
+# Args: channel rev_str
+function carton_channel_ensure_published()
+{
+    eval "$_CARTON_CHANNEL_GET_WITH_REV_STR"
+    carton_assert 'carton_channel_is_applicable "$channel" "$rev_str"'
+    if ! carton_channel_is_published "$channel" "$rev_str"; then
+        declare repo_str
+        repo_str=`carton_repo_list_get_repo "$channel_repo_name"`
+        carton_repo_publish "$repo_str" "$rev_str"
+    fi
+}
+
 # Withdraw (remove) a revision from a channel.
 # Args: channel rev_str
 function carton_channel_withdraw()
