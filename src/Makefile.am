@@ -18,16 +18,3 @@
 dist_bin_SCRIPTS = \
     carton \
     carton-env
-
-CARTON_LIB_DIR = $(pkgdatadir)
-CARTON_DATA_DIR = $(localstatedir)/lib/carton
-
-install-data-hook:
-	$(MKDIR_P) "$(DESTDIR)$(CARTON_DATA_DIR)"
-	mkdir "$(DESTDIR)$(CARTON_DATA_DIR)/project"
-	mkdir "$(DESTDIR)$(CARTON_DATA_DIR)/repo"
-
-install-exec-hook:
-	$(SED) -e 's#\(CARTON_LIB_DIR=\).*#\1"$(CARTON_LIB_DIR)"#' \
-           -e 's#\(CARTON_DATA_DIR=\).*#\1"$${CARTON_DATA_DIR-$(CARTON_DATA_DIR)}"#' \
-           -i "$(DESTDIR)$(bindir)/carton-env"
