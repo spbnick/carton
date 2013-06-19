@@ -533,48 +533,55 @@ function carton_project_update()
     done
 }
 
-# Skip project's new commits, without publishing.
+# Skip a project's branch new commits, without publishing.
 # Args: project_str
-function carton_project_skip()
+function carton_project_skip_branch()
 {
-    declare -r project_str="$1";   shift
-    declare -A project
-    declare branch_name
+    eval "$_CARTON_PROJECT_GET_BRANCH_LOC"
+    carton_assert 'carton_project_has_branch "$project_str" \
+                                             "$branch_name"'
     declare branch_str
     declare tag_glob
     declare new_tag_list_str
     declare ref
     declare desc
 
-    carton_arr_parse project <<<"$project_str"
     tag_glob=`carton_project_get_tag_glob "$project_str"`
+    branch_str=`carton_project_get_branch "$project_str" "$branch_name"`
 
-    for branch_name in `carton_project_list_branches "$project_str"`; do
-        branch_str=`carton_project_get_branch "$project_str" "$branch_name"`
+    # Update branch reference
+    GIT_DIR="${project[git_dir]}" \
+        git update-ref "refs/heads/$branch_name" "$branch_name@{upstream}"
 
-        # Update branch reference
-        GIT_DIR="${project[git_dir]}" \
-            git update-ref "refs/heads/$branch_name" \
-                           "$branch_name@{upstream}"
-
-        # Update tag list
-        new_tag_list_str=""
-        ref="refs/heads/$branch_name"
-        while true; do
-            desc=`GIT_DIR="${project[git_dir]}" \
-                    git describe --always --long --match="$tag_glob" "$ref"`
-            if [[ "$desc" != *-* ]]; then
-                break
-            fi
-            # Cut hash off
-            desc="${desc%-*}"
-            # Cut distance off
-            tag="${desc%-*}"
-            new_tag_list_str="${new_tag_list_str:+$new_tag_list_str }$tag"
-            ref="refs/tags/$tag^"
-        done
-        carton_branch_set_tag_list "$branch_str" "$new_tag_list_str"
+    # Update tag list
+    new_tag_list_str=""
+    ref="refs/heads/$branch_name"
+    while true; do
+        desc=`GIT_DIR="${project[git_dir]}" \
+                git describe --always --long --match="$tag_glob" "$ref"`
+        if [[ "$desc" != *-* ]]; then
+            break
+        fi
+        # Cut hash off
+        desc="${desc%-*}"
+        # Cut distance off
+        tag="${desc%-*}"
+        new_tag_list_str="${new_tag_list_str:+$new_tag_list_str }$tag"
+        ref="refs/tags/$tag^"
     done
+    carton_branch_set_tag_list "$branch_str" "$new_tag_list_str"
+}
+
+# Skip project's new commits, without publishing.
+# Args: project_str
+function carton_project_skip()
+{
+    declare -r project_str="$1";   shift
+    declare branch_name
+
+    while IFS= read -r branch_name; do
+        carton_project_skip_branch "$project_str" "$branch_name"
+    done < <(carton_project_list_branches "$project_str")
 }
 
 fi # _CARTON_PROJECT_SH
