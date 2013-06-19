@@ -21,9 +21,11 @@ CARTON_LIB_DIR = $(pkgdatadir)
 CARTON_DATA_DIR = $(localstatedir)/lib/carton
 
 install-data-hook:
-	$(MKDIR_P) "$(DESTDIR)$(CARTON_DATA_DIR)"
-	mkdir "$(DESTDIR)$(CARTON_DATA_DIR)/project"
-	mkdir "$(DESTDIR)$(CARTON_DATA_DIR)/repo"
+	export CARTON_DATA_DIR="$(DESTDIR)$(CARTON_DATA_DIR)"; \
+	if ! [ -e "$$CARTON_DATA_DIR" ]; then \
+		$(MKDIR_P) "$$CARTON_DATA_DIR" && \
+		PATH="$(top_srcdir)/src:$$PATH" carton init; \
+	fi
 
 install-exec-hook:
 	$(SED) -e 's#\(CARTON_LIB_DIR=\).*#\1"$(CARTON_LIB_DIR)"#' \
