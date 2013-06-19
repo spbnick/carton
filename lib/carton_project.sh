@@ -284,6 +284,8 @@ function carton_project_get_commit_rev_num()
 function carton_project_del_commit()
 {
     eval "$_CARTON_PROJECT_GET_COMMIT_LOC"
+    # Override read-only permissions of unfinished builds
+    chmod -R u+w "$commit_dir"
     rm -Rf "$commit_dir"
 }
 
