@@ -19,9 +19,9 @@
 # Boston, MA 02110-1301, USA.
 
 set -o errexit -o nounset -o pipefail
-shopt -s extdebug
+shopt -s extdebug extglob
 eval "`carton-env || echo exit 1`"
-. carton_util.sh
+. carton.sh
 
 # Description-parsing function interface.
 # Args: index summary name [spec_arg...]
@@ -38,7 +38,7 @@ eval "`carton-env || echo exit 1`"
 # Input: description list text
 # Output: description associative array string, with names as the
 #         keys and the output of parse_desc as the values
-function parse_desc_text()
+function desc_parse()
 {
     declare -r parse_desc="$1";     shift
     declare -A map=()
@@ -76,7 +76,7 @@ function parse_desc_text()
 # Parse option description.
 # Args: index summary id short long type [value]
 # Output: description associative array string
-function parse_opt_desc()
+function desc_opt_parse()
 {
     declare -r arg_num="$#"
     carton_assert '((arg_num >= 6 && arg_num <= 7))'
@@ -92,24 +92,24 @@ function parse_opt_desc()
 }
 
 # Parse argument description.
-# Args: index summary id [name [type]]
-# Output: specification associative array string
-function parse_arg_desc()
+# Args: index summary id type [name]
+# Output: description associative array string
+function desc_arg_parse()
 {
     declare -r arg_num="$#"
     carton_assert '((arg_num >= 3 && arg_num <= 5))'
     declare -A spec=(
         [summary]="$2"
-        [name]="${4-$3}"
-        [type]="${5-$3}"
+        [type]="${4-$3}"
+        [name]="${5-$3}"
     )
     carton_arr_print spec
 }
 
-# Parse command specification arguments.
+# Parse command description.
 # Args: index summary id [opt...] [-- [arg...] [(? arg...)...|* arg]]
-# Output: specification associative array string
-function parse_cmd_desc()
+# Output: description associative array string
+function desc_cmd_parse()
 {
     declare -r arg_num="$#"
     carton_assert '((arg_num >= 3))'
@@ -142,13 +142,29 @@ function parse_cmd_desc()
     carton_arr_print spec
 }
 
+# Parse boolean option value.
+# Args: params_str
+# Output: parsed value
+function opt_bool_parse()
+{
+    echo true
+}
+
+# Parse string option value.
+# Args: params_str value
+# Output: parsed value
+function opt_string_parse()
+{
+    echo "$2"
+}
+
 # Text describing available options.
 #
 # Each description is terminated with a dot on a line by itself, empty lines
 # between descriptions are ignored. Each description starts with specification
 # line, followed by one or more summary lines.
 #
-# Specification format: opt short long type [value]
+# Specification format: id short long type [value]
 #
 declare -r OPT_DESC_TEXT="
     assume_yes      y assume-yes        bool
@@ -167,51 +183,529 @@ declare -r OPT_DESC_TEXT="
     .
 "
 
+# Parse and validate string argument value.
+# Args: params_str value
+# Output: parsed value
+function arg_string_parse()
+{
+    echo "$2"
+}
+
+# Parse and validate new repo argument value.
+# Args: params_str value
+# Output: parsed value
+function arg_repo_new_parse()
+{
+    shift
+    declare -r value="$1";  shift
+
+    if ! carton_repo_list_is_valid_name "$value"; then
+        echo "Repository name \"$value\" is invalid." >&2
+        return 1
+    fi
+
+    if carton_repo_list_has_repo "$value"; then
+        echo "Repository \"$value\" already exists." >&2
+        return 1
+    fi
+
+    echo "$value"
+}
+
+# Parse and validate new project argument value.
+# Args: params_str value
+# Output: parsed value
+function arg_project_new_parse()
+{
+    shift
+    declare -r value="$1";  shift
+
+    if ! carton_project_list_is_valid_name "$value"; then
+        echo "Project name \"$value\" is invalid." >&2
+        return 1
+    fi
+
+    if carton_project_list_has_project "$value"; then
+        echo "Project \"$value\" already exists." >&2
+        return 1
+    fi
+
+    echo "$value"
+}
+
+# Parse and validate existing project argument value.
+# Args: params_str value
+# Output: parsed value
+function arg_project_old_parse()
+{
+    shift
+    declare -r value="$1";  shift
+
+    if ! carton_project_list_is_valid_name "$value"; then
+        echo "Project name \"$value\" is invalid." >&2
+        return 1
+    fi
+
+    if ! carton_project_list_has_project "$value"; then
+        echo "Project \"$value\" doesn't exist." >&2
+        return 1
+    fi
+
+    echo "$value"
+}
+
+# Parse and validate new branch argument value.
+# Args: params_str value
+# Output: parsed value
+function arg_branch_new_parse()
+{
+    declare -r params_str="$1"; shift
+    declare -r value="$1";      shift
+
+    declare -A params
+    carton_arr_parse params <<<"$params_str"
+    carton_assert '[ -n "${params[project_old]+set}" ]'
+    declare project_str
+    project_str=`carton_project_list_get_project "${params[project_old]}"`
+    declare -A project
+    carton_arr_parse project <<<"$project_str"
+
+    if carton_project_has_branch "$project_str" "$value"; then
+        echo "Branch \"$value\" already exists." >&2
+        return 1
+    fi
+
+    echo "$value"
+}
+
+# Parse and validate existing branch argument value.
+# Args: params_str value
+# Output: parsed value
+function arg_branch_old_parse()
+{
+    declare -r params_str="$1"; shift
+    declare -r value="$1";      shift
+
+    declare -A params
+    carton_arr_parse params <<<"$params_str"
+    carton_assert '[ -n "${params[project_old]+set}" ]'
+    declare project_str
+    project_str=`carton_project_list_get_project "${params[project_old]}"`
+    declare -A project
+    carton_arr_parse project <<<"$project_str"
+
+    if ! carton_project_has_branch "$project_str" "$value"; then
+        echo "Branch \"$value\" doesn't exist." >&2
+        return 1
+    fi
+
+    echo "$value"
+}
+
+# Parse and validate existing branch argument value.
+# Args: params_str value
+# Output: parsed value
+function arg_channel_parse()
+{
+    shift
+    declare -r value="$1";      shift
+
+    if ! carton_channel_is_valid "$value"; then
+        echo "Invalid channel \"$value\"." >&2
+        return 1
+    fi
+
+    echo "$value"
+}
+
 # Text describing available arguments.
 #
 # Each description is terminated with a dot on a line by itself, empty lines
 # between descriptions are ignored. Each description starts with specification
 # line, followed by one or more summary lines.
 #
-# Specification format: arg [name [type]]
+# Specification format: id type [name]
 #
 declare -r ARG_DESC_TEXT="
-    repo_new        repo_name
+    repo_new        repo_new    repo_name
     New repo name. A repo with such name should not exist.
     .
-    repo_pattern
+    repo_pattern    string
     An extended glob pattern matching a repo name.
     .
 
-    project_new     project_name
+    project_new     project_new project_name
     New project name.
     A project with such name should not exist.
     .
-    project_old     project_name
+    project_old     project_old project_name
     An existing project name.
     .
-    project_pattern
+    project_pattern string
     An extended glob pattern matching a project name.
     .
-    git_repo
+    git_repo        string
     A Git repo location.
     .
 
-    branch_new      branch_name
+    branch_new      branch_new  branch_name
     New branch name.
     A tracked branch with such name should not exist.
     .
-    branch_old      branch_name
+    branch_old      branch_old  branch_name
     An existing branch name.
     .
-    branch_pattern
+    branch_pattern  string
     An extended glob pattern matching a branch name.
     .
 
-    channel
+    channel         channel
     A publishing channel, in repo_name[/version_pattern] format.
     .
 "
+
+# Execute "init" command.
+# Input: params_str
+function cmd_init()
+{
+    declare -A params
+    carton_arr_parse params
+    carton_init
+}
+
+# Execute "cleanup" command.
+# Input: params_str
+function cmd_cleanup()
+{
+    declare -A params
+    carton_arr_parse params
+    carton_cleanup
+}
+
+# Execute "repo-list" command.
+# Input: params_str
+function cmd_repo_list()
+{
+    declare -A params
+    carton_arr_parse params
+    declare -a pattern_list
+    carton_arr_parse pattern_list <<<"${params[repo_pattern_list]}"
+    declare name
+    declare pattern
+
+    if [ "${#pattern_list[@]}" == 0 ]; then
+        pattern_list=('*')
+    fi
+
+    while IFS= read -r name; do
+        for pattern in "${pattern_list[@]}"; do
+            if [[ "$name" == $pattern ]]; then
+                echo "$name"
+                break
+            fi
+        done
+    done < <(carton_repo_list_list_repos)
+}
+
+# Execute "repo-add" command.
+# Input: params_str
+function cmd_repo_add()
+{
+    declare -A params
+    carton_arr_parse params
+    declare -a repo_list
+    carton_arr_parse repo_list <<<"${params[repo_new_list]}"
+    if [ "${#repo_list[@]}" != 0 ]; then
+        carton_repo_list_add_repo_list "${repo_list[@]}" >/dev/null
+    fi
+}
+
+# Execute "repo-del" command.
+# Input: params_str
+function cmd_repo_del()
+{
+    declare -A params
+    carton_arr_parse params
+    declare -a pattern_list
+    carton_arr_parse pattern_list <<<"${params[repo_pattern_list]}"
+    declare name
+    declare pattern
+
+    if [ "${#pattern_list[@]}" != 0 ]; then
+        while IFS= read -r name; do
+            for pattern in "${pattern_list[@]}"; do
+                if [[ "$name" == $pattern ]]; then
+                    carton_repo_list_del_repo "$name"
+                    break
+                fi
+            done
+        done < <(carton_repo_list_list_repos)
+    fi
+}
+
+# Execute "project-list" command.
+# Input: params_str
+function cmd_project_list()
+{
+    declare -A params
+    carton_arr_parse params
+    declare -a pattern_list
+    carton_arr_parse pattern_list <<<"${params[project_pattern_list]}"
+    declare name
+    declare pattern
+
+    if [ "${#pattern_list[@]}" == 0 ]; then
+        pattern_list=('*')
+    fi
+
+    while IFS= read -r name; do
+        for pattern in "${pattern_list[@]}"; do
+            if [[ "$name" == $pattern ]]; then
+                echo "$name"
+                break
+            fi
+        done
+    done < <(carton_project_list_list_projects)
+}
+
+# Execute "project-add" command.
+# Input: params_str
+function cmd_project_add()
+{
+    declare -A params
+    carton_arr_parse params
+    carton_project_list_add_project "${params[project_new]}" \
+                                    "${params[git_repo]}" \
+                                    "${params[tag_glob]-v*}" \
+                                    "${params[tag_format]-v%s}" \
+                                    "${params[update_max_age]-@0}" >/dev/null
+}
+
+# Execute "project-del" command.
+# Input: params_str
+function cmd_project_del()
+{
+    declare -A params
+    carton_arr_parse params
+    declare -a pattern_list
+    carton_arr_parse pattern_list <<<"${params[project_pattern_list]}"
+    declare name
+    declare pattern
+
+    if [ "${#pattern_list[@]}" != 0 ]; then
+        while IFS= read -r name; do
+            for pattern in "${pattern_list[@]}"; do
+                if [[ "$name" == $pattern ]]; then
+                    carton_project_list_del_project "$name"
+                    break
+                fi
+            done
+        done < <(carton_project_list_list_projects)
+    fi
+}
+
+# Execute a command operating on projects matching pattern list.
+# Args: cmd
+# Input: params_str
+function cmd_project_cmd()
+{
+    declare -r cmd="$1";    shift
+    declare -A params
+    carton_arr_parse params
+    declare -a pattern_list
+    carton_arr_parse pattern_list <<<"${params[project_pattern_list]}"
+    declare name
+    declare pattern
+
+    if [ "${#pattern_list[@]}" != 0 ]; then
+        while IFS= read -r name; do
+            for pattern in "${pattern_list[@]}"; do
+                if [[ "$name" == $pattern ]]; then
+                    "carton_project_$cmd" \
+                        "`carton_project_list_get_project \"\$name\"`"
+                    break
+                fi
+            done
+        done < <(carton_project_list_list_projects)
+    fi
+}
+
+# Execute "project-fetch" command.
+# Input: params_str
+function cmd_project_fetch()
+{
+    cmd_project_cmd fetch
+}
+
+# Execute "project-skip" command.
+# Input: params_str
+function cmd_project_skip()
+{
+    cmd_project_cmd skip
+}
+
+# Execute "project-update" command.
+# Input: params_str
+function cmd_project_update()
+{
+    cmd_project_cmd update
+}
+
+# Execute "branch-list" command.
+# Input: params_str
+function cmd_branch_list()
+{
+    declare -A params
+    carton_arr_parse params
+    declare -r project_name="${params[project_old]}"
+    declare project_str
+    project_str=`carton_project_list_get_project "$project_name"`
+    declare -a pattern_list
+    carton_arr_parse pattern_list <<<"${params[branch_pattern_list]}"
+    declare name
+    declare pattern
+
+    if [ "${#pattern_list[@]}" == 0 ]; then
+        pattern_list=('*')
+    fi
+
+    while IFS= read -r name; do
+        for pattern in "${pattern_list[@]}"; do
+            if [[ "$name" == $pattern ]]; then
+                echo "$name"
+                break
+            fi
+        done
+    done < <(carton_project_list_branches "$project_str")
+}
+
+# Execute "branch-add" command.
+# Input: params_str
+function cmd_branch_add()
+{
+    declare -A params
+    carton_arr_parse params
+    declare -r project_name="${params[project_old]}"
+    declare project_str
+    project_str=`carton_project_list_get_project "$project_name"`
+    declare -a channel_list
+    carton_arr_parse channel_list <<<"${params[channel_list]}"
+
+    if [ "${#channel_list[@]}" == 0 ]; then
+        carton_project_add_branch "$project_str" \
+                                  "${params[branch_new]}" >/dev/null
+    else
+        carton_project_add_branch "$project_str" \
+                                  "${params[branch_new]}" \
+                                  "${channel_list[*]}" >/dev/null
+    fi
+}
+
+# Execute "branch-del" command.
+# Input: params_str
+function cmd_branch_del()
+{
+    declare -A params
+    carton_arr_parse params
+    declare -r project_name="${params[project_old]}"
+    declare project_str
+    project_str=`carton_project_list_get_project "$project_name"`
+    declare -a pattern_list
+    carton_arr_parse pattern_list <<<"${params[branch_pattern_list]}"
+    declare name
+    declare pattern
+
+    if [ "${#pattern_list[@]}" != 0 ]; then
+        while IFS= read -r name; do
+            for pattern in "${pattern_list[@]}"; do
+                if [[ "$name" == $pattern ]]; then
+                    carton_project_del_branch "$project_str" "$name" \
+                        >/dev/null
+                    break
+                fi
+            done
+        done < <(carton_project_list_branches "$project_str")
+    fi
+}
+
+# Execute a command operating on a branch in a project context.
+# Args: cmd
+# Input: params_str
+function cmd_branch_project_cmd()
+{
+    declare -r cmd="$1";    shift
+    declare -A params
+    carton_arr_parse params
+    declare -r project_name="${params[project_old]}"
+    declare project_str
+    project_str=`carton_project_list_get_project "$project_name"`
+    declare -a pattern_list
+    carton_arr_parse pattern_list <<<"${params[branch_pattern_list]}"
+    declare name
+    declare pattern
+
+    if [ "${#pattern_list[@]}" != 0 ]; then
+        while IFS= read -r name; do
+            for pattern in "${pattern_list[@]}"; do
+                if [[ "$name" == $pattern ]]; then
+                    "carton_project_"$cmd"_branch" "$project_str" "$name"
+                    break
+                fi
+            done
+        done < <(carton_project_list_branches "$project_str")
+    fi
+}
+
+# Execute "branch-skip" command.
+# Input: params_str
+function cmd_branch_skip()
+{
+    cmd_branch_project_cmd skip
+}
+
+# Execute "branch-update" command.
+# Input: params_str
+function cmd_branch_update()
+{
+    cmd_branch_project_cmd update
+}
+
+# Execute "branch-get-channels" command.
+# Input: params_str
+function cmd_branch_get_channels()
+{
+    declare -A params
+    carton_arr_parse params
+    declare -r project_name="${params[project_old]}"
+    declare project_str
+    project_str=`carton_project_list_get_project "$project_name"`
+    declare -r name="${params[branch_old]}"
+    declare branch_str
+    branch_str=`carton_project_get_branch "$project_str" "$name"`
+    carton_branch_get_channel_list "$branch_str"
+    echo
+}
+
+# Execute "branch-set-channels" command.
+# Input: params_str
+function cmd_branch_set_channels()
+{
+    declare -A params
+    carton_arr_parse params
+    declare -r project_name="${params[project_old]}"
+    declare project_str
+    project_str=`carton_project_list_get_project "$project_name"`
+    declare -r name="${params[branch_old]}"
+    declare branch_str
+    branch_str=`carton_project_get_branch "$project_str" "$name"`
+    declare -a channel_list
+    carton_arr_parse channel_list <<<"${params[channel_list]}"
+    if [ "${#channel_list[@]}" == 0 ]; then
+        carton_branch_set_channel_list "$branch_str" ""
+    else
+        carton_branch_set_channel_list "$branch_str" "${channel_list[*]}"
+    fi
+}
 
 # Text describing available commands.
 #
@@ -219,7 +713,7 @@ declare -r ARG_DESC_TEXT="
 # between descriptions are ignored. Each description starts with specification
 # line, followed by one or more summary lines.
 #
-# Specification format: cmd [opt...] [-- [arg...] [(? arg...)...|* arg]]
+# Specification format: id [opt...] [-- [arg...] [(? arg...)...|* arg]]
 # 
 declare -r CMD_DESC_TEXT="
     cleanup             assume_yes
@@ -229,71 +723,73 @@ declare -r CMD_DESC_TEXT="
     Initialize data directory.
     .
 
+    repo-list           -- * repo_pattern
+    List repos.
+    .
     repo-add            -- * repo_new
     Add a new repo.
     .
     repo-del            -- * repo_pattern
     Delete repos matching a pattern.
     .
-    repo-list           -- * repo_pattern
-    List repos.
-    .
 
-    project-add         tag_glob tag_format update_max_age -- project_new git_repo
+    project-list        -- * project_pattern
+    List projects matching patterns, or all, if none specified.
+    .
+    project-add         tag_glob tag_format update_max_age \
+                        -- project_new git_repo
     Add a new project.
     .
     project-del         assume_yes -- * project_pattern
-    Delete projects matching a pattern.
+    Delete projects matching patterns.
     .
     project-fetch       -- * project_pattern
-    Fetch from remote repos of projects matching a pattern.
-    .
-    project-list        -- * project_pattern
-    List projects.
+    Fetch from remote repos of projects matching patterns.
     .
     project-skip        -- * project_pattern
-    Skip new revisions of projects matching a pattern.
+    Skip new revisions of projects matching patterns.
     .
     project-update      -- * project_pattern
-    Publish new revisions of projects matching a pattern.
+    Publish new revisions of projects matching patterns.
     .
 
+    branch-list         -- project_old * branch_pattern
+    List project's tracked branches with names matching patterns,
+    or all, if none specified.
+    .
     branch-add          -- project_old branch_new * channel
     Add a tracked branch.
     .
-    branch-del          assume_yes -- project_old branch_pattern
-    Delete tracked branches matching a pattern.
+    branch-del          assume_yes -- project_old * branch_pattern
+    Delete tracked branches with names matching patterns.
     .
-    branch-list         -- project_old * branch_pattern
-    List tracked branches of projects matching a pattern.
+    branch-skip         -- project_old * branch_pattern
+    Skip new revisions of branches matching patterns.
     .
-    branch-skip         -- project_old branch_pattern
-    Skip new revisions of branches matching a pattern.
-    .
-    branch-update       -- project_old branch_pattern
-    Publish new revisions of branches matching a pattern.
+    branch-update       -- project_old * branch_pattern
+    Publish new revisions of branches matching patterns.
     .
     branch-get-channels -- project_old branch_old
-    Output branch publishing channel list.
+    Output publishing channel list of a branch.
     .
     branch-set-channels -- project_old branch_old * channel
-    Set branch publishing channel list.
+    Set publishing channel list of a branch.
     .
 "
 
 declare ARG_MAP_STR
 declare -A ARG_MAP
-ARG_MAP_STR=`parse_desc_text parse_arg_desc <<<"$ARG_DESC_TEXT"`
+ARG_MAP_STR=`desc_parse desc_arg_parse <<<"$ARG_DESC_TEXT"`
 carton_arr_parse ARG_MAP <<<"$ARG_MAP_STR"
 
 declare OPT_MAP_STR
 declare -A OPT_MAP
-OPT_MAP_STR=`parse_desc_text parse_opt_desc <<<"$OPT_DESC_TEXT"`
+OPT_MAP_STR=`desc_parse desc_opt_parse <<<"$OPT_DESC_TEXT"`
 carton_arr_parse OPT_MAP <<<"$OPT_MAP_STR"
 
 declare CMD_MAP_STR
 declare -A CMD_MAP
-CMD_MAP_STR=`parse_desc_text parse_cmd_desc <<<"$CMD_DESC_TEXT"`
+CMD_MAP_STR=`desc_parse desc_cmd_parse <<<"$CMD_DESC_TEXT"`
 carton_arr_parse CMD_MAP <<<"$CMD_MAP_STR"
 declare -a CMD_LIST=()
 declare name
@@ -353,7 +849,6 @@ function command_usage()
 {
     declare -r name="$1"
     carton_assert '[ -n "${CMD_MAP[$name]+set}" ]'
-    declare desc_str
     declare -A desc
     declare -a opt_list
     declare -A opt_head_map=()
@@ -363,8 +858,7 @@ function command_usage()
     declare help_summary="Output command options and arguments and exit."
     declare width=0
 
-    desc_str="${CMD_MAP[$name]}"
-    carton_arr_parse desc <<<"$desc_str"
+    carton_arr_parse desc <<<"${CMD_MAP[$name]}"
     carton_arr_parse opt_list <<<"${desc[opt_list]}"
     carton_arr_parse arg_spec_list <<<"${desc[arg_spec_list]}"
 
@@ -479,7 +973,14 @@ function command_usage()
 # Args: name [arg]...
 function command()
 {
-    declare -r name="$1"
+    declare -r name="$1";   shift
+    declare -A desc
+    declare -a opt_list
+    declare -a arg_spec_list
+    declare getopt_options="h"
+    declare getopt_longoptions="help"
+    declare args_expr
+    declare -A params=()
 
     if [ -z "${CMD_MAP[$name]+set}" ]; then
         echo "Unknown command \"$name\"." >&2
@@ -487,7 +988,135 @@ function command()
         exit 1
     fi
 
-    command_usage "$name"
+    carton_arr_parse desc <<<"${CMD_MAP[$name]}"
+    carton_arr_parse opt_list <<<"${desc[opt_list]}"
+    carton_arr_parse arg_spec_list <<<"${desc[arg_spec_list]}"
+
+    # Build getopt short and long option list
+    if [ "${#opt_list[@]}" != 0 ]; then
+        declare opt
+        declare -A opt_desc
+        declare opt_head
+        for opt in "${opt_list[@]}"; do
+            carton_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
+            carton_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
+            getopt_options+="${opt_desc[short]}"
+            getopt_longoptions+=",${opt_desc[long]}"
+            if [ -n "${opt_desc[value]:+set}" ]; then
+                getopt_options+=:
+                getopt_longoptions+=:
+            fi
+        done
+    fi
+
+    # Extract parameters from options
+    args_expr=`getopt --name \`basename "\$0"\` \
+                      --options "$getopt_options" \
+                      --longoptions "$getopt_longoptions" \
+                      -- "$@"` || { command_usage "$name" >&2; exit 1; }
+    eval set -- "$args_expr"
+    while true; do
+        case "$1" in
+            -h|--help)
+                command_usage "$name"; exit 0;;
+            --) shift; break;;
+            *)
+                carton_assert "[ "${#opt_list[@]}" != 0 ]"
+                declare opt
+                declare -A opt_desc
+                declare opt_head
+                for opt in "${opt_list[@]}"; do
+                    carton_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
+                    carton_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
+                    if [[ "-${opt_desc[short]}" == "$1" ||
+                          "--${opt_desc[long]}" == "$1" ]]; then
+                        if [ -n "${opt_desc[value]:+set}" ]; then
+                            params[$opt]=`
+                                "opt_${opt_desc[type]}_parse" \
+                                    "\`carton_arr_print params\`" "$2"` ||
+                                { command_usage "$name" >&2; exit 1; }
+                            shift
+                        else
+                            params[$opt]=`
+                                "opt_${opt_desc[type]}_parse" \
+                                    "\`carton_arr_print params\`"` ||
+                                { command_usage "$name" >&2; exit 1; }
+                        fi
+                        shift
+                        break;
+                    fi
+                done
+                ;;
+        esac
+    done
+
+    # Extract parameters from arguments
+    if [ "${#arg_spec_list[@]}" != 0 ]; then
+        declare i
+        declare j
+        declare arg_spec
+        declare prev_arg_spec=""
+        for ((i = 0; i < ${#arg_spec_list[@]}; i++)); do
+            arg_spec="${arg_spec_list[i]}"
+            if [[ "$arg_spec" == [*?] ]]; then
+                carton_assert '[ "$prev_arg_spec" != "*" ]'
+                carton_assert '[[ "$prev_arg_spec" != "?" || "$arg_spec" != "?" ]]'
+            else
+                if [ "$prev_arg_spec" == "*" ]; then
+                    declare -a list=()
+                    declare value
+                    for ((j = i; j < ${#arg_spec_list[@]}; j++)); do
+                        params[${arg_spec}_list]=""
+                    done
+                    while [ "$#" != 0 ]; do
+                        for ((j = i; j < ${#arg_spec_list[@]}; j++)); do
+                            if [ "$#" == 0 ]; then
+                                echo "Invalid number of positional arguments." >&2
+                                command_usage "$name" >&2
+                                exit 1
+                            fi
+                            # Process argument
+                            arg_spec="${arg_spec_list[j]}"
+                            declare -A arg_desc
+                            carton_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
+                            carton_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
+                            carton_arr_parse list <<<"${params[${arg_spec}_list]}" 
+                            value=`"arg_${arg_desc[type]}_parse" \
+                                    "\`carton_arr_print params\`" "$1"` ||
+                                        { command_usage "$name" >&2; exit 1; }
+                            list+=("$value")
+                            params[${arg_spec}_list]=`carton_arr_print list`
+                            shift
+                        done
+                    done
+                    break
+                else
+                    if [ "$#" == 0 ]; then
+                        if [ "$prev_arg_spec" == "?" ]; then
+                            break
+                        else
+                            echo "Invalid number of positional arguments." >&2
+                            command_usage "$name" >&2
+                            exit 1
+                        fi
+                    fi
+                    # Process argument
+                    declare -A arg_desc
+                    carton_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
+                    carton_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
+                    params[$arg_spec]=`
+                        "arg_${arg_desc[type]}_parse" \
+                            "\`carton_arr_print params\`" "$1"` ||
+                        { command_usage "$name" >&2; exit 1; }
+                    shift
+                fi
+            fi
+            prev_arg_spec="$arg_spec"
+        done
+    fi
+
+    # Execute the command
+    "cmd_${name//-/_}" < <(carton_arr_print params)
 }
 
 #
@@ -505,7 +1134,7 @@ declare args_expr
 args_expr=`getopt --name \`basename "\$0"\` \
                   --options +h \
                   --longoptions help \
-                  -- "$@"`
+                  -- "$@"` || { usage >&2; exit 1; }
 eval set -- "$args_expr"
 while true; do
     case "$1" in
