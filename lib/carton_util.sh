@@ -157,6 +157,7 @@ function carton_arr_parse()
     declare _k
     declare _v
     eval "
+        $_var=()
         while IFS='' read -r _k && [ \"\$_k\" != \"*\" ]; do
             IFS='' read -r _v || break
             printf -v _k '%b' \"\$_k\"
