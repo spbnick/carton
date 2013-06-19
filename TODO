@@ -25,3 +25,6 @@ from different merged branches do not conflict.
 Switch to using ep_test_sh/ep_suite_sh, where appropriate.
 
 Consider doing assertions between argument assignment and initial macros.
+
+Revert backtrace order, so the assertion failure message is next to the
+function it occured in.
