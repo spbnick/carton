@@ -82,7 +82,7 @@ function carton_project_list_get_project()
 function carton_project_list_del_project()
 {
     eval "$_CARTON_PROJECT_LIST_GET_PROJECT_LOC"
-    carton_assert 'carton_project_list_has "$project_name"'
+    carton_assert 'carton_project_list_has_project "$project_name"'
     rm -Rf -- "$project_dir"
 }
 
