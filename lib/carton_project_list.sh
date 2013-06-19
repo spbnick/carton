@@ -58,7 +58,7 @@ function carton_project_list_has_project()
 }
 
 # Add a new project to the list and output its string.
-# Args: project_name dir repo_url [[tag_glob tag_format] update_max_age]
+# Args: project_name repo_url [[tag_glob tag_format] update_max_age]
 # Output: project string
 function carton_project_list_add_project()
 {
