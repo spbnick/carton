@@ -1151,4 +1151,10 @@ if [ $# == 0 ]; then
     exit 1
 fi
 
+declare status
+carton_lock "10 minutes" || {
+    echo "Timeout getting data directory lock." >&2
+    exit 1
+}
+trap carton_unlock EXIT
 command "$@"
