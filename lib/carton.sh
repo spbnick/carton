@@ -25,18 +25,23 @@ declare _CARTON_SH=
 . carton_repo_list.sh
 
 declare -r CARTON_LOCK_FILE="$CARTON_DATA_DIR/lock.pid"
-declare -r CARTON_LOCK_TIMEOUT="10 minutes"
 declare -r CARTON_LOCK_INTERVAL="5s"
 
 # Lock the data directory on behalf of the current shell.
+# Args: [timeout]
 function carton_lock()
 {
+    carton_assert '[ -d "$CARTON_DATA_DIR" ]'
+    carton_assert '[ -w "$CARTON_DATA_DIR" ]'
+
     declare deadline
-    deadline=`date --date="$CARTON_LOCK_TIMEOUT" +%s`
+    if [ -n "${1+set}" ]; then
+        deadline=`date --date="$1" +%s`
+    fi
 
     # Spin-lock
     while ! ( set -o noclobber && echo $$ >"$CARTON_LOCK_FILE" ) 2>/dev/null; do
-        if ((`date +%s` > deadline)); then
+        if [ -n "$deadline" ] && ((`date +%s` > deadline)); then
             return 1
         fi
         sleep "$CARTON_LOCK_INTERVAL"
