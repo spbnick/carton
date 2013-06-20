@@ -57,7 +57,9 @@ function carton_locked()
 # Check if the data directory is locked by the current shell.
 function carton_owned()
 {
-    [ "$$" == `< "$CARTON_LOCK_FILE"` ] 2>/dev/null
+    declare lock_pid
+    lock_pid=`< "$CARTON_LOCK_FILE"` 2>/dev/null &&
+        [ "$$" == "$lock_pid" ]
 }
 
 # Unlock the data directory locked by the current shell.
