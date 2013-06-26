@@ -125,7 +125,7 @@ function _carton_repo_update()
             "$command" "$repo_str" "$rev_str"
 
             # Update metadata
-            createrepo --update "${repo[rpm_old]}"
+            createrepo --update "${repo[rpm_cur]}"
 
             # Move to the updated repo atomically
             ln -s "${repo[rpm_cur]}" "${repo[rpm_link]}".new
