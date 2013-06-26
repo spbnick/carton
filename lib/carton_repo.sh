@@ -148,7 +148,7 @@ function _carton_repo_add()
 {
     eval "$_CARTON_REPO_GET_REPO_AND_REV"
     find "${rev[rpm_dir]}" -name "*.rpm" -print0 |
-        xargs -0 cp -t "${repo[rpm_cur]}"
+        xargs -0 cp -n -t "${repo[rpm_cur]}"
 }
 
 # Remove revision packages from a repo directory.
