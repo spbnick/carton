@@ -89,11 +89,6 @@ function _carton_rev_build_rpm()
             declare tarball
             declare spec
 
-            # Check distribution has tarballs
-            [ -f "$dist_dir/"*.tar.gz ]
-            # Check distribution has spec files
-            [ -f "$dist_dir/"*.spec ]
-
             mkdir "$rpm_dir"{,/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}}
 
             for tarball in "$dist_dir/"*.tar.gz; do
