@@ -46,6 +46,7 @@ function carton_repo_init()
     mkdir "${repo[rpm_cur]}"
     createrepo --quiet "${repo[rpm_cur]}"
     ln -s "${repo[rpm_cur]}" "${repo[rpm_link]}"
+    touch "${repo[rpm_log]}"
     carton_arr_print repo
 }
 
