@@ -20,9 +20,6 @@
 if [ -z "${_CARTON_UTIL_SH+set}" ]; then
 declare _CARTON_UTIL_SH=
 
-CARTON_ENV=`carton-env`
-eval "$CARTON_ENV"
-
 # Unindent text by removing at most the number of spaces present in the first
 # non-empty line from the beginning of every line.
 # Input: indented text
