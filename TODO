@@ -19,9 +19,6 @@ name whatever they unpack to specifically.
 
 Verify variable type in carton_arr_parse/print
 
-Add commit hash to revision identifier so that revisions with the same number
-from different merged branches do not conflict.
-
 Switch to using ep_test_sh/ep_suite_sh, where appropriate.
 
 Consider doing assertions between argument assignment and initial macros.

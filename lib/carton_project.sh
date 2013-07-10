@@ -24,6 +24,10 @@ declare _CARTON_PROJECT_SH=
 . carton_branch.sh
 . carton_commit.sh
 
+# Length of hash used to tell apart commits with
+# the same version and revision number
+declare -r _CARTON_PROJECT_SHORT_HASH_LEN=7
+
 # Load base project properties from arguments.
 # Args: dir
 declare -r _CARTON_PROJECT_LOAD_BASE='
@@ -160,6 +164,8 @@ declare -r _CARTON_PROJECT_GET_COMMIT_LOC='
     declare commit_hash
     commit_hash=`GIT_DIR="${project[git_dir]}" \
                     git rev-parse --verify "$committish^{commit}"`
+    declare -r commit_hash_short="${commit_hash::
+                                    _CARTON_PROJECT_SHORT_HASH_LEN}"
     declare -r commit_dir="${project[commit_dir]}/$commit_hash"
 '
 
@@ -191,7 +197,7 @@ function carton_project_add_commit()
     carton_assert "! carton_project_has_commit \"\$project_str\" \
                                                \"\$committish\""
     mkdir "$commit_dir"
-    carton_commit_init "$commit_dir" < <(
+    carton_commit_init "$commit_hash_short" "$commit_dir" < <(
         GIT_DIR="${project[git_dir]}" \
             git archive --format=tar "$commit_hash"
     )
@@ -205,7 +211,7 @@ function carton_project_get_commit()
     eval "$_CARTON_PROJECT_GET_COMMIT_LOC"
     carton_assert "carton_project_has_commit \"\$project_str\" \
                                              \"\$committish\""
-    carton_commit_load "$commit_dir"
+    carton_commit_load "$commit_hash_short" "$commit_dir"
 }
 
 # Create or get a project commit and output its string.

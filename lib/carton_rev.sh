@@ -34,16 +34,18 @@ function carton_rev_num_is_valid()
 # Load base revision properties.
 # Args: _dir _num _dist_dir
 declare -r _CARTON_REV_LOAD_BASE='
-    declare -r dir="$1";   shift
+    declare -r dir="$1";    shift
     carton_assert "[ -d \"\$dir\" ]"
-    declare -r ver="$1";   shift
-    declare -r num="$1";   shift
+    declare -r ver="$1";    shift
+    declare -r num="$1";    shift
+    declare -r hash="$1";   shift
     carton_assert "carton_rev_num_is_valid \"\$num\""
 
     declare -A rev=(
         [dir]="$dir"
         [ver]="$ver"
         [num]="$num"
+        [hash]="$hash"
         [rpm_dir]="$dir/rpm"
         [rpm_stamp]="$dir/rpm.stamp"
         [rpm_log]="$dir/rpm.log"
@@ -60,7 +62,7 @@ declare -r _CARTON_REV_LOAD_PKGS='
 '
 
 # Build RPM packages for a revision.
-# Args: dist_dir rpm_dir rpm_log rpm_stamp num
+# Args: dist_dir rpm_dir rpm_log rpm_stamp num hash
 function _carton_rev_build_rpm()
 {
     declare -r dist_dir="$1";  shift
@@ -68,13 +70,14 @@ function _carton_rev_build_rpm()
     declare -r rpm_log="$1";   shift
     declare -r rpm_stamp="$1"; shift
     declare -r num="$1";       shift
+    declare -r hash="$1";      shift
 
     declare -a rpm_opts=("--define=_topdir $rpm_dir")
 
     if ((num > 0)); then
-        rpm_opts+=("--define=rev .1.$((num))")
+        rpm_opts+=("--define=rev .1.$((num)).$hash")
     elif ((num < 0)); then
-        rpm_opts+=("--define=rev .0.$((-num))")
+        rpm_opts+=("--define=rev .0.$((-num)).$hash")
     fi
 
     (
@@ -112,7 +115,7 @@ function _carton_rev_build_rpm()
 }
 
 # Initialize a revision and output its string.
-# Args: dir ver num dist_dir
+# Args: dir ver num hash dist_dir
 # Output: revision string
 function carton_rev_init()
 {
@@ -123,13 +126,14 @@ function carton_rev_init()
                           "${rev[rpm_dir]}" \
                           "${rev[rpm_log]}" \
                           "${rev[rpm_stamp]}" \
-                          "${rev[num]}"
+                          "${rev[num]}" \
+                          "${rev[hash]}"
     eval "$_CARTON_REV_LOAD_PKGS"
     carton_arr_print rev
 }
 
 # Load and output a revision string.
-# Args: dir ver num
+# Args: dir ver num hash
 # Output: revision string
 function carton_rev_load()
 {

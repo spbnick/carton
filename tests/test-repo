@@ -33,7 +33,7 @@ declare GIT_DIR="$WORK_DIR/.git"
 declare -r COMMIT_DIR="$DATA_DIR/commit"
 mkdir "$COMMIT_DIR"
 declare commit_str
-commit_str=`carton_commit_init "$COMMIT_DIR" < <(
+commit_str=`carton_commit_init 0123abc "$COMMIT_DIR" < <(
     GIT_DIR="$GIT_DIR" git archive --format=tar "v2"
 )`
 declare rev_str
@@ -120,8 +120,8 @@ ep_suite_begin publish; (
         declare -A repo
         carton_arr_parse repo <<<"$repo_str"
         carton_repo_publish "$repo_str" "$rev_str"
-        ep_test rpm test -f "${repo[rpm_link]}/carton-test-2-1.1.1.noarch.rpm"
-        ep_test srpm test -f "${repo[rpm_link]}/carton-test-2-1.1.1.src.rpm"
+        ep_test rpm test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc.noarch.rpm"
+        ep_test srpm test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc.src.rpm"
     ); ep_suite_end
 ); ep_suite_end
 
@@ -152,9 +152,9 @@ ep_suite_begin withdraw; (
         carton_repo_publish "$repo_str" "$rev_str"
         carton_repo_withdraw "$repo_str" "$rev_str"
         ep_test rpm eval \
-                '! test -f "${repo[rpm_link]}/carton-test-2-1.1.1.noarch.rpm"'
+                '! test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc.noarch.rpm"'
         ep_test srpm eval \
-                '! test -f "${repo[rpm_link]}/carton-test-2-1.1.1.src.rpm"'
+                '! test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc.src.rpm"'
     ); ep_suite_end
 ); ep_suite_end
 

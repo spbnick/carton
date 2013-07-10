@@ -100,7 +100,7 @@ function test_commit()
 
                 ep_test_begin do; (
                     ep_test_init
-                    carton_commit_init "$COMMIT_DIR" < <(
+                    carton_commit_init 0123abc "$COMMIT_DIR" < <(
                         GIT_DIR="$GIT_DIR" git archive --format=tar \
                                                        "$committish"
                     ) >/dev/null
@@ -115,7 +115,7 @@ function test_commit()
 
                 declare commit_str
                 commit_str=`
-                    carton_commit_init "$COMMIT_DIR" < <(
+                    carton_commit_init 0123abc "$COMMIT_DIR" < <(
                         GIT_DIR="$GIT_DIR" git archive --format=tar \
                                                        "$committish"
                     )`
@@ -134,19 +134,19 @@ function test_commit()
 
             mkdir "$COMMIT_DIR"
             ep_teardown_push rm -Rf "$COMMIT_DIR"
-            carton_commit_init "$COMMIT_DIR" < <(
+            carton_commit_init 0123abc "$COMMIT_DIR" < <(
                 GIT_DIR="$GIT_DIR" git archive --format=tar "$committish"
             ) >/dev/null
 
             ep_test_begin exec; (
                 ep_test_init
-                carton_commit_load "$COMMIT_DIR" >/dev/null
+                carton_commit_load 0123abc "$COMMIT_DIR" >/dev/null
             ); ep_test_end
 
             ep_suite_begin verify; (
                 ep_suite_init
                 declare commit_str
-                commit_str=`carton_commit_load "$COMMIT_DIR"`
+                commit_str=`carton_commit_load 0123abc "$COMMIT_DIR"`
                 declare -A commit
                 carton_arr_parse commit <<<"$commit_str"
                 ep_test is_built [ "${commit[is_built]}" == "$is_built" ]

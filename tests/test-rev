@@ -38,6 +38,7 @@ function test_commit()
     declare -r committish="$1"; shift
     declare -r dist_ver="$1";   shift
     declare -r rev_num="$1";    shift
+    declare -r hash="$1";       shift
     declare -r is_built="$1";   shift
     declare -r release="$1";    shift
 
@@ -66,8 +67,8 @@ function test_commit()
                 ep_test_begin "do"; (
                     ep_test_init
                     carton_rev_init "$REV_DIR" \
-                                    "$dist_ver" "$rev_num" "$DIST_DIR" \
-                                        >/dev/null
+                                    "$dist_ver" "$rev_num" "$hash" \
+                                    "$DIST_DIR" >/dev/null
                 ); ep_test_end
             ); ep_suite_end
 
@@ -79,7 +80,8 @@ function test_commit()
 
                 declare rev_str
                 rev_str=`carton_rev_init "$REV_DIR" \
-                                         "$dist_ver" "$rev_num" "$DIST_DIR"`
+                                         "$dist_ver" "$rev_num" "$hash" \
+                                         "$DIST_DIR"`
                 declare -A rev
                 carton_arr_parse rev <<<"$rev_str"
 
@@ -99,17 +101,20 @@ function test_commit()
             mkdir "$REV_DIR"
             ep_teardown_push rm -Rf "$REV_DIR"
             carton_rev_init "$REV_DIR" \
-                            "$dist_ver" "$rev_num" "$DIST_DIR" >/dev/null
+                            "$dist_ver" "$rev_num" "$hash" "$DIST_DIR" \
+                                >/dev/null
 
             ep_test_begin exec; (
                 ep_test_init
-                carton_rev_load "$REV_DIR" "$dist_ver" "$rev_num" >/dev/null
+                carton_rev_load "$REV_DIR" "$dist_ver" "$rev_num" "$hash" \
+                                    >/dev/null
             ); ep_test_end
 
             ep_suite_begin verify; (
                 ep_suite_init
                 declare rev_str
-                rev_str=`carton_rev_load "$REV_DIR" "$dist_ver" "$rev_num"`
+                rev_str=`carton_rev_load "$REV_DIR" "$dist_ver" "$rev_num" \
+                                            "$hash"`
                 declare -A rev
                 carton_arr_parse rev <<<"$rev_str"
                 ep_test is_built [ "${rev[is_built]}" == "$is_built" ]
@@ -135,10 +140,10 @@ ep_test_begin source; (
 . carton_rev.sh
 test_git_make "$WORK_DIR"
 
-test_commit pre-v1-pre-spec add_spec^   1   -1  false   ""
-test_commit pre-v1-spec     add_spec    1   -2  true    "1.0.2"
-test_commit v1              v1          1   0   true    "1"
-test_commit post-v1         v2_update^  1   1   true    "1.1.1"
-test_commit v2              v2          2   0   true    "1"
+test_commit pre-v1-pre-spec add_spec^   1   -1  0123abc false   ""
+test_commit pre-v1-spec     add_spec    1   -2  0123abc true    "1.0.2.0123abc"
+test_commit v1              v1          1   0   0123abc true    "1"
+test_commit post-v1         v2_update^  1   1   0123abc true    "1.1.1.0123abc"
+test_commit v2              v2          2   0   0123abc true    "1"
 
 } # Workaround vim subshell syntax highlighting issue

@@ -26,10 +26,12 @@ declare _CARTON_COMMIT_SH=
 # Load base commit properties.
 # Args: dir
 declare -r _CARTON_COMMIT_LOAD_BASE='
+    declare -r hash="$1";          shift
     declare -r dir="$1";           shift
     carton_assert "[ -d \"\$dir\" ]"
 
     declare -A commit=(
+        [hash]="$hash"
         [dir]="$dir"
         [dist_dir]="$dir/dist"
         [dist_log]="$dir/dist.log"
@@ -50,7 +52,7 @@ declare -r _CARTON_COMMIT_LOAD_DIST='
 '
 
 # Initialize and output a commit.
-# Args: dir
+# Args: hash dir
 # Input: commit tarball
 # Output: commit
 function carton_commit_init()
@@ -95,7 +97,7 @@ function carton_commit_init()
 }
 
 # Load and output a commit.
-# Args: dir
+# Args: hash dir
 # Output: commit
 function carton_commit_load()
 {
@@ -135,7 +137,8 @@ function carton_commit_add_rev()
     carton_assert '! carton_commit_has_rev "$commit_str" "$rev_num"'
     mkdir "$rev_dir"
     carton_rev_init "$rev_dir" \
-                    "${commit[dist_ver]}" "$rev_num" "${commit[dist_dir]}"
+                    "${commit[dist_ver]}" "$rev_num" "${commit[hash]}" \
+                    "${commit[dist_dir]}"
 }
 
 # Load a commit revision and output its string.
@@ -146,7 +149,8 @@ function carton_commit_get_rev()
     eval "$_CARTON_COMMIT_GET_REV_LOC"
     carton_assert '${commit[is_built]}'
     carton_assert 'carton_commit_has_rev "$commit_str" "$rev_num"'
-    carton_rev_load "$rev_dir" "${commit[dist_ver]}" "$rev_num"
+    carton_rev_load "$rev_dir" \
+                    "${commit[dist_ver]}" "$rev_num" "${commit[hash]}"
 }
 
 # Create or load a commit revision and output its string.

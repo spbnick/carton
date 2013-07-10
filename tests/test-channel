@@ -49,10 +49,10 @@ declare GIT_DIR="$WORK_DIR/.git"
 declare -r v1_dir="$DATA_DIR/v1" v2_dir="$DATA_DIR/v2"
 mkdir "$v1_dir" "$v2_dir"
 declare v1 v2
-v1=`carton_commit_init "$v1_dir" < <(
+v1=`carton_commit_init 0123abc "$v1_dir" < <(
     GIT_DIR="$GIT_DIR" git archive --format=tar "v1"
 )`
-v2=`carton_commit_init "$v2_dir" < <(
+v2=`carton_commit_init 4567def "$v2_dir" < <(
     GIT_DIR="$GIT_DIR" git archive --format=tar "v2"
 )`
 declare v1_r_minus1 v1_r_0 v1_r_1 v2_r_0
