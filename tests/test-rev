@@ -142,8 +142,8 @@ test_git_make "$WORK_DIR"
 
 test_commit pre-v1-pre-spec add_spec^   1   -1  0123abc false   ""
 test_commit pre-v1-spec     add_spec    1   -2  0123abc true    "1.0.2.0123abc"
-test_commit v1              v1          1   0   0123abc true    "1"
+test_commit v1              v1          1   0   0123abc true    "1.1"
 test_commit post-v1         v2_update^  1   1   0123abc true    "1.1.1.0123abc"
-test_commit v2              v2          2   0   0123abc true    "1"
+test_commit v2              v2          2   0   0123abc true    "1.1"
 
 } # Workaround vim subshell syntax highlighting issue

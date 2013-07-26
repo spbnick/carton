@@ -74,10 +74,12 @@ function _carton_rev_build_rpm()
 
     declare -a rpm_opts=("--define=_topdir $rpm_dir")
 
-    if ((num > 0)); then
-        rpm_opts+=("--define=rev .1.$((num)).$hash")
-    elif ((num < 0)); then
+    if ((num < 0)); then
         rpm_opts+=("--define=rev .0.$((-num)).$hash")
+    elif ((num == 0)); then
+        rpm_opts+=("--define=rev .1")
+    else
+        rpm_opts+=("--define=rev .1.$((num)).$hash")
     fi
 
     (
