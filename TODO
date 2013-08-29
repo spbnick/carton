@@ -17,8 +17,6 @@ using accessor functions instead.
 Consider reversing the meaning: make "handles" be "objects" themselves and
 name whatever they unpack to specifically.
 
-Verify variable type in carton_arr_parse/print
-
 Switch to using ep_test_sh/ep_suite_sh, where appropriate.
 
 Consider doing assertions between argument assignment and initial macros.

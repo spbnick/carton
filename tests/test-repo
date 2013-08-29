@@ -21,6 +21,7 @@
 eval "`ep_env && carton-env || echo exit 1`"
 . test_git.sh
 . ep.sh
+. thud_arr.sh
 ep_suite_init "$@"
 
 . carton_commit.sh
@@ -70,7 +71,7 @@ ep_suite_begin init; (
         declare repo_str
         repo_str=`carton_repo_init "$REPO_DIR"`
         declare -A repo
-        carton_arr_parse repo <<<"$repo_str"
+        thud_arr_parse repo <<<"$repo_str"
         ep_test dir_exists test -d "${repo[dir]}"
     ); ep_suite_end
 ); ep_suite_end
@@ -91,7 +92,7 @@ ep_suite_begin load; (
         declare repo_str
         repo_str=`carton_repo_load "$REPO_DIR"`
         declare -A repo
-        carton_arr_parse repo <<<"$repo_str"
+        thud_arr_parse repo <<<"$repo_str"
         ep_test dir_exists test -d "${repo[dir]}"
     ); ep_suite_end
 ); ep_suite_end
@@ -118,7 +119,7 @@ ep_suite_begin publish; (
         declare repo_str
         repo_str=`carton_repo_init "$REPO_DIR"`
         declare -A repo
-        carton_arr_parse repo <<<"$repo_str"
+        thud_arr_parse repo <<<"$repo_str"
         carton_repo_publish "$repo_str" "$rev_str"
         ep_test rpm test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc.noarch.rpm"
         ep_test srpm test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc.src.rpm"
@@ -148,7 +149,7 @@ ep_suite_begin withdraw; (
         declare repo_str
         repo_str=`carton_repo_init "$REPO_DIR"`
         declare -A repo
-        carton_arr_parse repo <<<"$repo_str"
+        thud_arr_parse repo <<<"$repo_str"
         carton_repo_publish "$repo_str" "$rev_str"
         carton_repo_withdraw "$repo_str" "$rev_str"
         ep_test rpm eval \

@@ -18,8 +18,9 @@
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA 02110-1301, USA.
 
-eval "`ep_env || echo exit 1`"
+eval "`ep_env && carton-env || echo exit 1`"
 . ep.sh
+. thud_arr.sh
 ep_suite_init "$@"
 
 declare -r DATA_DIR=`mktemp --tmpdir -d carton-test.XXXXXXXX`
@@ -75,7 +76,7 @@ ep_suite_begin init; (
                                     \"\$PROJECT_DIR\" \"\$GIT_DIR\" \
                                     $args"`
                 declare -A project
-                carton_arr_parse project <<<"$project_str"
+                thud_arr_parse project <<<"$project_str"
                 cd "${project[git_dir]}"
                 ep_test tag_glob \
                             [ "`git config --get carton.tag-glob`" == \
@@ -115,7 +116,7 @@ ep_suite_begin load; (
         declare project_str
         project_str=`carton_project_load "$PROJECT_DIR"`
         declare -A project
-        carton_arr_parse project <<<"$project_str"
+        thud_arr_parse project <<<"$project_str"
         cd "${project[git_dir]}"
         ep_test tag_glob \
                     [ "`git config --get carton.tag-glob`" == \
@@ -147,7 +148,7 @@ ep_suite_begin fetch; (
         project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
         carton_project_fetch "$project_str"
         declare -A project
-        carton_arr_parse project <<<"$project_str"
+        thud_arr_parse project <<<"$project_str"
         GIT_DIR="${project[git_dir]}" \
             ep_test origin_master_exists \
                     git rev-list -n1 refs/remotes/origin/master >/dev/null
@@ -178,7 +179,7 @@ ep_suite_begin commit; (
             declare commit_str
             commit_str=`carton_project_add_commit "$project_str" v1`
             declare -A commit
-            carton_arr_parse commit <<<"$commit_str"
+            thud_arr_parse commit <<<"$commit_str"
             ep_test dir_exists [ -d "${commit[dir]}" ]
         ); ep_suite_end
     ); ep_suite_end
@@ -206,7 +207,7 @@ ep_suite_begin commit; (
             declare commit_str
             commit_str=`carton_project_get_commit "$project_str" v1`
             declare -A commit
-            carton_arr_parse commit <<<"$commit_str"
+            thud_arr_parse commit <<<"$commit_str"
             ep_test exists [ -d "${commit[dir]}" ]
         ); ep_suite_end
     ); ep_suite_end
@@ -233,7 +234,7 @@ ep_suite_begin commit; (
             declare commit_str
             commit_str=`carton_project_add_commit "$project_str" v1`
             declare -A commit
-            carton_arr_parse commit <<<"$commit_str"
+            thud_arr_parse commit <<<"$commit_str"
             carton_project_del_commit "$project_str" v1
             ep_test not_exists eval "! [ -d "${commit[dir]}" ]"
         ); ep_suite_end
@@ -324,7 +325,7 @@ ep_suite_begin branch; (
             declare branch_str
             branch_str=`carton_project_add_branch "$project_str" master`
             declare -A branch
-            carton_arr_parse branch <<<"$branch_str"
+            thud_arr_parse branch <<<"$branch_str"
             GIT_DIR="${branch[git_dir]}" \
                 ep_test exists \
                         git rev-list -n1 "refs/heads/${branch[name]}" >/dev/null
@@ -354,7 +355,7 @@ ep_suite_begin branch; (
             declare branch_str
             branch_str=`carton_project_get_branch "$project_str" master`
             declare -A branch
-            carton_arr_parse branch <<<"$branch_str"
+            thud_arr_parse branch <<<"$branch_str"
             GIT_DIR="${branch[git_dir]}" \
                 ep_test exists \
                         git rev-list -n1 "refs/heads/${branch[name]}" >/dev/null
@@ -383,7 +384,7 @@ ep_suite_begin branch; (
             declare branch_str
             branch_str=`carton_project_add_branch "$project_str" master`
             declare -A branch
-            carton_arr_parse branch <<<"$branch_str"
+            thud_arr_parse branch <<<"$branch_str"
             carton_project_del_branch "$project_str" master
             GIT_DIR="${branch[git_dir]}" \
                 ep_test not_exists \

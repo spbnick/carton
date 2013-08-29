@@ -21,6 +21,7 @@
 eval "`ep_env && carton-env || echo exit 1`"
 . test_git.sh
 . ep.sh
+. thud_arr.sh
 ep_suite_init "$@"
 
 declare -r DATA_DIR=`mktemp --tmpdir -d carton-test.XXXXXXXX`
@@ -83,7 +84,7 @@ function test_commit()
                                          "$dist_ver" "$rev_num" "$hash" \
                                          "$DIST_DIR"`
                 declare -A rev
-                carton_arr_parse rev <<<"$rev_str"
+                thud_arr_parse rev <<<"$rev_str"
 
                 ep_test is_built [ "${rev[is_built]}" == "$is_built" ]
                 if $is_built; then
@@ -116,7 +117,7 @@ function test_commit()
                 rev_str=`carton_rev_load "$REV_DIR" "$dist_ver" "$rev_num" \
                                             "$hash"`
                 declare -A rev
-                carton_arr_parse rev <<<"$rev_str"
+                thud_arr_parse rev <<<"$rev_str"
                 ep_test is_built [ "${rev[is_built]}" == "$is_built" ]
                 if $is_built; then
                     ep_test has_rpm test -f \

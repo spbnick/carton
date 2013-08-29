@@ -18,8 +18,9 @@
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA 02110-1301, USA.
 
-eval "`ep_env || echo exit 1`"
+eval "`ep_env && carton-env || echo exit 1`"
 . ep.sh
+. thud_arr.sh
 ep_suite_init "$@"
 
 declare CARTON_DATA_DIR=`mktemp --tmpdir -d carton-test.XXXXXXXX`
@@ -53,7 +54,7 @@ ep_suite_begin add; (
         declare repo_str
         repo_str=`carton_repo_list_add_repo test`
         declare -A repo
-        carton_arr_parse repo <<<"$repo_str"
+        thud_arr_parse repo <<<"$repo_str"
         ep_test dir_path_correct \
                 test "$CARTON_REPO_LIST_DIR/test" == "${repo[dir]}"
         ep_test dir_exists test -d "${repo[dir]}"
@@ -109,7 +110,7 @@ ep_suite_begin get; (
         declare repo_str
         repo_str=`carton_repo_list_get_repo test`
         declare -A repo
-        carton_arr_parse repo <<<"$repo_str"
+        thud_arr_parse repo <<<"$repo_str"
         ep_test dir_path_correct \
                 test "$CARTON_REPO_LIST_DIR/test" == "${repo[dir]}"
         ep_test dir_exists test -d "${repo[dir]}"

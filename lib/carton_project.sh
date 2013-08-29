@@ -24,6 +24,7 @@ declare _CARTON_PROJECT_SH=
 . carton_branch.sh
 . carton_commit.sh
 . thud_misc.sh
+. thud_arr.sh
 
 # Length of hash used to tell apart commits with
 # the same version and revision number
@@ -66,7 +67,7 @@ function carton_project_init()
     )
     mkdir "${project[commit_dir]}"
 
-    carton_arr_print project
+    thud_arr_print project
 }
 
 # Load and output a project string.
@@ -75,7 +76,7 @@ function carton_project_init()
 function carton_project_load()
 {
     eval "$_CARTON_PROJECT_LOAD_BASE"
-    carton_arr_print project
+    thud_arr_print project
 }
 
 # Output a project configuration option value.
@@ -86,7 +87,7 @@ function _carton_project_config_get()
     declare -r project_str="$1";    shift
     declare -r name="$1";           shift
     declare -A project
-    carton_arr_parse project <<<"$project_str"
+    thud_arr_parse project <<<"$project_str"
     GIT_DIR="${project[git_dir]}" git config --get "carton.$name"
 }
 
@@ -98,7 +99,7 @@ function _carton_project_config_set()
     declare -r name="$1";           shift
     declare -r value="$1";          shift
     declare -A project
-    carton_arr_parse project <<<"$project_str"
+    thud_arr_parse project <<<"$project_str"
     GIT_DIR="${project[git_dir]}" git config "carton.$name" "$value"
 }
 
@@ -151,7 +152,7 @@ function carton_project_fetch()
 {
     declare -r project_str="$1";   shift
     declare -A project
-    carton_arr_parse project <<<"$project_str"
+    thud_arr_parse project <<<"$project_str"
     GIT_DIR="${project[git_dir]}" git fetch --quiet
 }
 
@@ -160,7 +161,7 @@ declare -r _CARTON_PROJECT_GET_COMMIT_LOC='
     declare -r committish="$1";    shift
 
     declare -A project
-    carton_arr_parse project <<<"$project_str"
+    thud_arr_parse project <<<"$project_str"
 
     declare commit_hash
     commit_hash=`GIT_DIR="${project[git_dir]}" \
@@ -178,7 +179,7 @@ function carton_project_has_commit()
     declare -r committish="$1";    shift
 
     declare -A project
-    carton_arr_parse project <<<"$project_str"
+    thud_arr_parse project <<<"$project_str"
 
     declare commit_hash
     commit_hash=`GIT_DIR="${project[git_dir]}" \
@@ -248,11 +249,11 @@ function carton_project_get_commit_rev_num()
     declare tag_distance
     declare rev_num
 
-    carton_arr_parse project <<<"$project_str"
+    thud_arr_parse project <<<"$project_str"
 
     thud_assert 'carton_project_has_commit "$project_str" "$committish"'
     commit_str=`carton_project_get_commit "$project_str" "$committish"`
-    carton_arr_parse commit <<<"$commit_str"
+    thud_arr_parse commit <<<"$commit_str"
     thud_assert '"${commit[is_built]}"'
 
     tag_glob=`GIT_DIR="${project[git_dir]}" \
@@ -300,7 +301,7 @@ declare -r _CARTON_PROJECT_GET_BRANCH_LOC='
     declare -r project_str="$1";   shift
     declare -r branch_name="$1";   shift
     declare -A project
-    carton_arr_parse project <<<"$project_str"
+    thud_arr_parse project <<<"$project_str"
     thud_assert "carton_branch_name_is_valid \"${project[git_dir]}\" \
                                                \"\$branch_name\""
 '
@@ -311,7 +312,7 @@ function carton_project_list_branches()
 {
     declare -r project_str="$1";   shift
     declare -A project
-    carton_arr_parse project <<<"$project_str"
+    thud_arr_parse project <<<"$project_str"
     declare ref
 
     for ref in `GIT_DIR="${project[git_dir]}" \
@@ -378,7 +379,7 @@ function _carton_project_update_commit()
     declare -A rev
 
     commit_str=`carton_project_add_or_get_commit "$project_str" "$committish"`
-    carton_arr_parse commit <<<"$commit_str"
+    thud_arr_parse commit <<<"$commit_str"
 
     if ! "${commit[is_built]}"; then
         return 0
@@ -387,7 +388,7 @@ function _carton_project_update_commit()
     rev_num=`carton_project_get_commit_rev_num "$project_str" "$committish"`
 
     rev_str=`carton_commit_add_or_get_rev "$commit_str" "$rev_num"`
-    carton_arr_parse rev <<<"$rev_str"
+    thud_arr_parse rev <<<"$rev_str"
 
     if ! "${rev[is_built]}"; then
         return 0
@@ -411,7 +412,7 @@ function carton_project_update_commit_list()
     declare max_age_epoch
     declare commit_hash
 
-    carton_arr_parse project <<<"$project_str"
+    thud_arr_parse project <<<"$project_str"
     max_age_epoch=`carton_project_get_update_max_age_epoch "$project_str"`
 
     # For each specified commit not older than max_age_epoch
@@ -437,7 +438,7 @@ function carton_project_update_branch_new()
     declare branch_str
     declare channel_list
 
-    carton_arr_parse project <<<"$project_str"
+    thud_arr_parse project <<<"$project_str"
     branch_str=`carton_project_get_branch "$project_str" \
                                           "$branch_name"`
     channel_list=`carton_branch_get_channel_list "$branch_str"`
@@ -471,7 +472,7 @@ function carton_project_update_branch_tags()
     declare new_tag_list_str
     declare desc
 
-    carton_arr_parse project <<<"$project_str"
+    thud_arr_parse project <<<"$project_str"
     tag_glob=`carton_project_get_tag_glob "$project_str"`
     branch_str=`carton_project_get_branch "$project_str" \
                                           "$branch_name"`

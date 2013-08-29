@@ -23,6 +23,7 @@ declare _CARTON_CHANNEL_SH=
 . carton_util.sh
 . carton_repo_list.sh
 . thud_misc.sh
+. thud_arr.sh
 
 # Check if a string is a valid channel.
 # Args: str
@@ -49,7 +50,7 @@ function carton_channel_is_applicable()
 {
     eval "$_CARTON_CHANNEL_GET_WITH_REV_STR"
     declare -A rev
-    carton_arr_parse rev <<<"$rev_str"
+    thud_arr_parse rev <<<"$rev_str"
     [[ "$channel_ver_regex" == "" ||
        "${rev[num]}" == 0 && "${rev[ver]}" =~ $channel_ver_regex ]]
 }

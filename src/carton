@@ -23,6 +23,7 @@ shopt -s extdebug extglob
 eval "`carton-env || echo exit 1`"
 . carton.sh
 . thud_misc.sh
+. thud_arr.sh
 
 # Description-parsing function interface.
 # Args: index summary name [spec_arg...]
@@ -71,7 +72,7 @@ function desc_parse()
         fi
     done < <(thud_unindent)
 
-    carton_arr_print map
+    thud_arr_print map
 }
 
 # Parse option description.
@@ -89,7 +90,7 @@ function desc_opt_parse()
         [type]="$6"
         [value]="${7-}"
     )
-    carton_arr_print spec
+    thud_arr_print spec
 }
 
 # Parse argument description.
@@ -104,7 +105,7 @@ function desc_arg_parse()
         [type]="${4-$3}"
         [name]="${5-$3}"
     )
-    carton_arr_print spec
+    thud_arr_print spec
 }
 
 # Parse command description.
@@ -137,10 +138,10 @@ function desc_cmd_parse()
     spec=(
         [index]="$index"
         [summary]="$summary"
-        [opt_list]=`carton_arr_print opt_list`
-        [arg_spec_list]=`carton_arr_print arg_spec_list`
+        [opt_list]=`thud_arr_print opt_list`
+        [arg_spec_list]=`thud_arr_print arg_spec_list`
     )
-    carton_arr_print spec
+    thud_arr_print spec
 }
 
 # Parse boolean option value.
@@ -264,12 +265,12 @@ function arg_branch_new_parse()
     declare -r value="$1";      shift
 
     declare -A params
-    carton_arr_parse params <<<"$params_str"
+    thud_arr_parse params <<<"$params_str"
     thud_assert '[ -n "${params[project_old]+set}" ]'
     declare project_str
     project_str=`carton_project_list_get_project "${params[project_old]}"`
     declare -A project
-    carton_arr_parse project <<<"$project_str"
+    thud_arr_parse project <<<"$project_str"
 
     if carton_project_has_branch "$project_str" "$value"; then
         echo "Branch \"$value\" already exists." >&2
@@ -288,12 +289,12 @@ function arg_branch_old_parse()
     declare -r value="$1";      shift
 
     declare -A params
-    carton_arr_parse params <<<"$params_str"
+    thud_arr_parse params <<<"$params_str"
     thud_assert '[ -n "${params[project_old]+set}" ]'
     declare project_str
     project_str=`carton_project_list_get_project "${params[project_old]}"`
     declare -A project
-    carton_arr_parse project <<<"$project_str"
+    thud_arr_parse project <<<"$project_str"
 
     if ! carton_project_has_branch "$project_str" "$value"; then
         echo "Branch \"$value\" doesn't exist." >&2
@@ -370,7 +371,7 @@ declare -r ARG_DESC_TEXT="
 function cmd_init()
 {
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     carton_init
 }
 
@@ -379,7 +380,7 @@ function cmd_init()
 function cmd_cleanup()
 {
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     carton_cleanup
 }
 
@@ -388,9 +389,9 @@ function cmd_cleanup()
 function cmd_repo_list()
 {
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     declare -a pattern_list
-    carton_arr_parse pattern_list <<<"${params[repo_pattern_list]}"
+    thud_arr_parse pattern_list <<<"${params[repo_pattern_list]}"
     declare name
     declare pattern
 
@@ -413,9 +414,9 @@ function cmd_repo_list()
 function cmd_repo_add()
 {
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     declare -a repo_list
-    carton_arr_parse repo_list <<<"${params[repo_new_list]}"
+    thud_arr_parse repo_list <<<"${params[repo_new_list]}"
     if [ "${#repo_list[@]}" != 0 ]; then
         carton_repo_list_add_repo_list "${repo_list[@]}" >/dev/null
     fi
@@ -426,9 +427,9 @@ function cmd_repo_add()
 function cmd_repo_del()
 {
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     declare -a pattern_list
-    carton_arr_parse pattern_list <<<"${params[repo_pattern_list]}"
+    thud_arr_parse pattern_list <<<"${params[repo_pattern_list]}"
     declare name
     declare pattern
 
@@ -449,9 +450,9 @@ function cmd_repo_del()
 function cmd_project_list()
 {
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     declare -a pattern_list
-    carton_arr_parse pattern_list <<<"${params[project_pattern_list]}"
+    thud_arr_parse pattern_list <<<"${params[project_pattern_list]}"
     declare name
     declare pattern
 
@@ -474,7 +475,7 @@ function cmd_project_list()
 function cmd_project_add()
 {
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     carton_project_list_add_project "${params[project_new]}" \
                                     "${params[git_repo]}" \
                                     "${params[tag_glob]-v*}" \
@@ -487,9 +488,9 @@ function cmd_project_add()
 function cmd_project_del()
 {
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     declare -a pattern_list
-    carton_arr_parse pattern_list <<<"${params[project_pattern_list]}"
+    thud_arr_parse pattern_list <<<"${params[project_pattern_list]}"
     declare name
     declare pattern
 
@@ -512,9 +513,9 @@ function cmd_project_cmd()
 {
     declare -r cmd="$1";    shift
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     declare -a pattern_list
-    carton_arr_parse pattern_list <<<"${params[project_pattern_list]}"
+    thud_arr_parse pattern_list <<<"${params[project_pattern_list]}"
     declare name
     declare pattern
 
@@ -557,12 +558,12 @@ function cmd_project_update()
 function cmd_branch_list()
 {
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     declare -r project_name="${params[project_old]}"
     declare project_str
     project_str=`carton_project_list_get_project "$project_name"`
     declare -a pattern_list
-    carton_arr_parse pattern_list <<<"${params[branch_pattern_list]}"
+    thud_arr_parse pattern_list <<<"${params[branch_pattern_list]}"
     declare name
     declare pattern
 
@@ -585,12 +586,12 @@ function cmd_branch_list()
 function cmd_branch_add()
 {
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     declare -r project_name="${params[project_old]}"
     declare project_str
     project_str=`carton_project_list_get_project "$project_name"`
     declare -a channel_list
-    carton_arr_parse channel_list <<<"${params[channel_list]}"
+    thud_arr_parse channel_list <<<"${params[channel_list]}"
 
     if [ "${#channel_list[@]}" == 0 ]; then
         carton_project_add_branch "$project_str" \
@@ -607,12 +608,12 @@ function cmd_branch_add()
 function cmd_branch_del()
 {
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     declare -r project_name="${params[project_old]}"
     declare project_str
     project_str=`carton_project_list_get_project "$project_name"`
     declare -a pattern_list
-    carton_arr_parse pattern_list <<<"${params[branch_pattern_list]}"
+    thud_arr_parse pattern_list <<<"${params[branch_pattern_list]}"
     declare name
     declare pattern
 
@@ -636,12 +637,12 @@ function cmd_branch_project_cmd()
 {
     declare -r cmd="$1";    shift
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     declare -r project_name="${params[project_old]}"
     declare project_str
     project_str=`carton_project_list_get_project "$project_name"`
     declare -a pattern_list
-    carton_arr_parse pattern_list <<<"${params[branch_pattern_list]}"
+    thud_arr_parse pattern_list <<<"${params[branch_pattern_list]}"
     declare name
     declare pattern
 
@@ -676,7 +677,7 @@ function cmd_branch_update()
 function cmd_branch_get_channels()
 {
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     declare -r project_name="${params[project_old]}"
     declare project_str
     project_str=`carton_project_list_get_project "$project_name"`
@@ -692,7 +693,7 @@ function cmd_branch_get_channels()
 function cmd_branch_set_channels()
 {
     declare -A params
-    carton_arr_parse params
+    thud_arr_parse params
     declare -r project_name="${params[project_old]}"
     declare project_str
     project_str=`carton_project_list_get_project "$project_name"`
@@ -700,7 +701,7 @@ function cmd_branch_set_channels()
     declare branch_str
     branch_str=`carton_project_get_branch "$project_str" "$name"`
     declare -a channel_list
-    carton_arr_parse channel_list <<<"${params[channel_list]}"
+    thud_arr_parse channel_list <<<"${params[channel_list]}"
     if [ "${#channel_list[@]}" == 0 ]; then
         carton_branch_set_channel_list "$branch_str" ""
     else
@@ -781,22 +782,22 @@ declare -r CMD_DESC_TEXT="
 declare ARG_MAP_STR
 declare -A ARG_MAP
 ARG_MAP_STR=`desc_parse desc_arg_parse <<<"$ARG_DESC_TEXT"`
-carton_arr_parse ARG_MAP <<<"$ARG_MAP_STR"
+thud_arr_parse ARG_MAP <<<"$ARG_MAP_STR"
 
 declare OPT_MAP_STR
 declare -A OPT_MAP
 OPT_MAP_STR=`desc_parse desc_opt_parse <<<"$OPT_DESC_TEXT"`
-carton_arr_parse OPT_MAP <<<"$OPT_MAP_STR"
+thud_arr_parse OPT_MAP <<<"$OPT_MAP_STR"
 
 declare CMD_MAP_STR
 declare -A CMD_MAP
 CMD_MAP_STR=`desc_parse desc_cmd_parse <<<"$CMD_DESC_TEXT"`
-carton_arr_parse CMD_MAP <<<"$CMD_MAP_STR"
+thud_arr_parse CMD_MAP <<<"$CMD_MAP_STR"
 declare -a CMD_LIST=()
 declare name
 declare -A desc
 for name in "${!CMD_MAP[@]}"; do
-    carton_arr_parse desc <<<"${CMD_MAP[$name]}"
+    thud_arr_parse desc <<<"${CMD_MAP[$name]}"
     CMD_LIST[${desc[index]}]="$name"
 done
 
@@ -832,7 +833,7 @@ function usage()
     width=$(((width / 4 + 1) * 4))
 
     for name in "${CMD_LIST[@]}"; do
-        carton_arr_parse desc <<<"${CMD_MAP[$name]}"
+        thud_arr_parse desc <<<"${CMD_MAP[$name]}"
         while IFS= read -r line; do
             printf "    %-${width}s%s\\n" "$name" "$line"
             name=""
@@ -859,9 +860,9 @@ function command_usage()
     declare help_summary="Output command options and arguments and exit."
     declare width=0
 
-    carton_arr_parse desc <<<"${CMD_MAP[$name]}"
-    carton_arr_parse opt_list <<<"${desc[opt_list]}"
-    carton_arr_parse arg_spec_list <<<"${desc[arg_spec_list]}"
+    thud_arr_parse desc <<<"${CMD_MAP[$name]}"
+    thud_arr_parse opt_list <<<"${desc[opt_list]}"
+    thud_arr_parse arg_spec_list <<<"${desc[arg_spec_list]}"
 
     echo -n "Usage: `basename \"\$0\"` [GLOBAL_OPTION]... $name [OPTION]..."
 
@@ -873,7 +874,7 @@ function command_usage()
         declare opt_head
         for opt in "${opt_list[@]}"; do
             thud_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
-            carton_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
+            thud_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
             opt_head="-${opt_desc[short]}, --${opt_desc[long]}"
             opt_head+="${opt_desc[value]:+=${opt_desc[value]}}"
             width=$((${#opt_head} > width ? ${#opt_head} : width))
@@ -900,7 +901,7 @@ function command_usage()
             else
                 declare -A arg_desc
                 thud_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
-                carton_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
+                thud_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
                 width=$((${#arg_desc[name]} > width
                                 ? ${#arg_desc[name]}
                                 : width))
@@ -939,7 +940,7 @@ function command_usage()
         declare opt_head
         for opt in "${opt_list[@]}"; do
             thud_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
-            carton_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
+            thud_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
             opt_head="${opt_head_map[$opt]}"
             while IFS= read -r line; do
                 printf "    %-${width}s%s\\n" "$opt_head" "$line"
@@ -958,7 +959,7 @@ function command_usage()
                 declare -A arg_desc
                 declare arg_name
                 thud_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
-                carton_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
+                thud_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
                 arg_name="${arg_desc[name]}"
                 while IFS= read -r line; do
                     printf "    %-${width}s%s\\n" "${arg_name^^}" "$line"
@@ -989,9 +990,9 @@ function command()
         exit 1
     fi
 
-    carton_arr_parse desc <<<"${CMD_MAP[$name]}"
-    carton_arr_parse opt_list <<<"${desc[opt_list]}"
-    carton_arr_parse arg_spec_list <<<"${desc[arg_spec_list]}"
+    thud_arr_parse desc <<<"${CMD_MAP[$name]}"
+    thud_arr_parse opt_list <<<"${desc[opt_list]}"
+    thud_arr_parse arg_spec_list <<<"${desc[arg_spec_list]}"
 
     # Build getopt short and long option list
     if [ "${#opt_list[@]}" != 0 ]; then
@@ -1000,7 +1001,7 @@ function command()
         declare opt_head
         for opt in "${opt_list[@]}"; do
             thud_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
-            carton_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
+            thud_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
             getopt_options+="${opt_desc[short]}"
             getopt_longoptions+=",${opt_desc[long]}"
             if [ -n "${opt_desc[value]:+set}" ]; then
@@ -1028,19 +1029,19 @@ function command()
                 declare opt_head
                 for opt in "${opt_list[@]}"; do
                     thud_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
-                    carton_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
+                    thud_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
                     if [[ "-${opt_desc[short]}" == "$1" ||
                           "--${opt_desc[long]}" == "$1" ]]; then
                         if [ -n "${opt_desc[value]:+set}" ]; then
                             params[$opt]=`
                                 "opt_${opt_desc[type]}_parse" \
-                                    "\`carton_arr_print params\`" "$2"` ||
+                                    "\`thud_arr_print params\`" "$2"` ||
                                 { command_usage "$name" >&2; exit 1; }
                             shift
                         else
                             params[$opt]=`
                                 "opt_${opt_desc[type]}_parse" \
-                                    "\`carton_arr_print params\`"` ||
+                                    "\`thud_arr_print params\`"` ||
                                 { command_usage "$name" >&2; exit 1; }
                         fi
                         shift
@@ -1080,13 +1081,13 @@ function command()
                             arg_spec="${arg_spec_list[j]}"
                             declare -A arg_desc
                             thud_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
-                            carton_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
-                            carton_arr_parse list <<<"${params[${arg_spec}_list]}" 
+                            thud_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
+                            thud_arr_parse list <<<"${params[${arg_spec}_list]}" 
                             value=`"arg_${arg_desc[type]}_parse" \
-                                    "\`carton_arr_print params\`" "$1"` ||
+                                    "\`thud_arr_print params\`" "$1"` ||
                                         { command_usage "$name" >&2; exit 1; }
                             list+=("$value")
-                            params[${arg_spec}_list]=`carton_arr_print list`
+                            params[${arg_spec}_list]=`thud_arr_print list`
                             shift
                         done
                     done
@@ -1104,10 +1105,10 @@ function command()
                     # Process argument
                     declare -A arg_desc
                     thud_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
-                    carton_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
+                    thud_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
                     params[$arg_spec]=`
                         "arg_${arg_desc[type]}_parse" \
-                            "\`carton_arr_print params\`" "$1"` ||
+                            "\`thud_arr_print params\`" "$1"` ||
                         { command_usage "$name" >&2; exit 1; }
                     shift
                 fi
@@ -1117,7 +1118,7 @@ function command()
     fi
 
     # Execute the command
-    "cmd_${name//-/_}" < <(carton_arr_print params)
+    "cmd_${name//-/_}" < <(thud_arr_print params)
 }
 
 #

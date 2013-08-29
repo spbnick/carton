@@ -23,6 +23,7 @@ declare _CARTON_COMMIT_SH=
 . carton_util.sh
 . carton_rev.sh
 . thud_misc.sh
+. thud_arr.sh
 
 # Load base commit properties.
 # Args: dir
@@ -94,7 +95,7 @@ function carton_commit_init()
     ) > "${commit[dist_log]}" 2>&1
 
     eval "$_CARTON_COMMIT_LOAD_DIST"
-    carton_arr_print commit
+    thud_arr_print commit
 }
 
 # Load and output a commit.
@@ -104,7 +105,7 @@ function carton_commit_load()
 {
     eval "$_CARTON_COMMIT_LOAD_BASE
           $_CARTON_COMMIT_LOAD_DIST"
-    carton_arr_print commit
+    thud_arr_print commit
 }
 
 # Assign commit revision location variables.
@@ -115,7 +116,7 @@ declare -r _CARTON_COMMIT_GET_REV_LOC='
     thud_assert "carton_rev_num_is_valid \"\$rev_num\""
 
     declare -A commit
-    carton_arr_parse commit <<<"$commit_str"
+    thud_arr_parse commit <<<"$commit_str"
 
     declare -r rev_dir="${commit[rev_dir]}/$rev_num"
 '

@@ -22,6 +22,7 @@ declare _CARTON_REPO_SH=
 
 . carton_util.sh
 . thud_misc.sh
+. thud_arr.sh
 
 # Load base repository parameters
 # Args: dir
@@ -48,7 +49,7 @@ function carton_repo_init()
     createrepo --quiet "${repo[rpm_cur]}"
     ln -s "${repo[rpm_cur]}" "${repo[rpm_link]}"
     touch "${repo[rpm_log]}"
-    carton_arr_print repo
+    thud_arr_print repo
 }
 
 # Load and output a repo string.
@@ -57,7 +58,7 @@ function carton_repo_init()
 function carton_repo_load()
 {
     eval "$_CARTON_REPO_LOAD_BASE"
-    carton_arr_print repo
+    thud_arr_print repo
 }
 
 # Get repo/revision pair from arguments
@@ -66,9 +67,9 @@ declare -r _CARTON_REPO_GET_REPO_AND_REV='
     declare -r repo_str="$1"; shift
     declare -r rev_str="$1"; shift
     declare -A repo
-    carton_arr_parse "repo" <<<"$repo_str"
+    thud_arr_parse "repo" <<<"$repo_str"
     declare -A rev
-    carton_arr_parse "rev" <<<"$rev_str"
+    thud_arr_parse "rev" <<<"$rev_str"
 '
 
 # Check if a commit revision is published in a repo.
@@ -101,7 +102,7 @@ function _carton_repo_update()
     declare -r rev_str="$1";    shift
     declare -A repo
     declare status
-    carton_arr_parse repo <<<"$repo_str"
+    thud_arr_parse repo <<<"$repo_str"
 
     set +o errexit
     (

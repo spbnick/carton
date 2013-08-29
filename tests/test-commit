@@ -21,6 +21,7 @@
 eval "`ep_env && carton-env || echo exit 1`"
 . test_git.sh
 . ep.sh
+. thud_arr.sh
 ep_suite_init "$@"
 
 declare -r DATA_DIR=`mktemp --tmpdir -d carton-test.XXXXXXXX`
@@ -35,7 +36,7 @@ function test_rev()
 {
     declare -r commit_str="$1"; shift
     declare -A commit
-    carton_arr_parse commit <<<"$commit_str"
+    thud_arr_parse commit <<<"$commit_str"
 
     ep_suite_begin rev; (
         ep_suite_init
@@ -120,7 +121,7 @@ function test_commit()
                                                        "$committish"
                     )`
                 declare -A commit
-                carton_arr_parse commit <<<"$commit_str"
+                thud_arr_parse commit <<<"$commit_str"
                 ep_test is_built [ "${commit[is_built]}" == "$is_built" ]
                 if $is_built; then
                     ep_test dist_ver [ "${commit[dist_ver]}" == "$dist_ver" ]
@@ -148,7 +149,7 @@ function test_commit()
                 declare commit_str
                 commit_str=`carton_commit_load 0123abc "$COMMIT_DIR"`
                 declare -A commit
-                carton_arr_parse commit <<<"$commit_str"
+                thud_arr_parse commit <<<"$commit_str"
                 ep_test is_built [ "${commit[is_built]}" == "$is_built" ]
                 if $is_built; then
                     ep_test dist_ver [ "${commit[dist_ver]}" == "$dist_ver" ]

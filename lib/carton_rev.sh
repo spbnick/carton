@@ -22,6 +22,7 @@ declare _CARTON_REV_SH=
 
 . carton_util.sh
 . thud_misc.sh
+. thud_arr.sh
 
 # Check if a string is a valid revision number.
 # Args: str
@@ -132,7 +133,7 @@ function carton_rev_init()
                           "${rev[num]}" \
                           "${rev[hash]}"
     eval "$_CARTON_REV_LOAD_PKGS"
-    carton_arr_print rev
+    thud_arr_print rev
 }
 
 # Load and output a revision string.
@@ -142,7 +143,7 @@ function carton_rev_load()
 {
     eval "$_CARTON_REV_LOAD_BASE
           $_CARTON_REV_LOAD_PKGS"
-    carton_arr_print rev
+    thud_arr_print rev
 }
 
 fi # _CARTON_REV_SH
