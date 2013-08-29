@@ -1128,7 +1128,7 @@ function command()
 unset GETOPT_COMPATIBLE
 # Check if getopt is enhanced and supports quoting
 if getopt --test >/dev/null; [ $? != 4 ]; then
-    carton_abort 0 Enhanced getopt not found
+    thud_abort Enhanced getopt not found
 fi
 
 declare args_expr
@@ -1142,7 +1142,7 @@ while true; do
         -h|--help)
             usage; exit 0;;
         --) shift; break;;
-        *) carton_abort 0 "Unknown option: $1";;
+        *) thud_abort "Unknown option: $1";;
     esac
 done
 

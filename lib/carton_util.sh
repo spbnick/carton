@@ -22,25 +22,11 @@ declare _CARTON_UTIL_SH=
 
 . thud_misc.sh
 
-# Abort shell, optionally outputting a message to stderr.
-# Args: [frame [echo_arg]...]
-function carton_abort()
-{
-    declare -r frame="${1-1}";  shift || true
-    carton_assert '(( "$frame" >= 0 ))'
-
-    if [ $# != 0 ]; then
-        thud_backtrace "$((frame + 1))" >&2
-        echo "$@" >&2
-    fi
-    exit 1
-}
-
 # Evaluate and execute a command string, abort shell if unsuccessfull.
 # Args: [eval_arg]...
 function carton_assert()
 {
-    eval "$@" || carton_abort 1 "Assertion failed: $@"
+    eval "$@" || thud_abort_frame 1 "Assertion failed: $@"
 }
 
 # Check if a string is suitable for use in a data sub-directory path.
