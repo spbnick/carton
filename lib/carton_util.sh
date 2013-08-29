@@ -28,12 +28,4 @@ function carton_is_valid_fs_name()
     [[ "$str" =~ ^[A-Za-z0-9_-]+$ ]]
 }
 
-# Check if a string is a valid variable name.
-# Args: name
-function carton_is_valid_var_name()
-{
-    declare -r str="$1"
-    [[ "$1" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]
-}
-
 fi # _CARTON_UTIL_SH
