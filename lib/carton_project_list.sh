@@ -31,7 +31,7 @@ declare -r CARTON_PROJECT_LIST_DIR="$CARTON_DATA_DIR/project"
 # Args: str
 function carton_project_list_is_valid_name()
 {
-    carton_is_valid_fs_name "$1"
+    carton_is_fs_name "$1"
 }
 
 # Output the list of project names, one per line.

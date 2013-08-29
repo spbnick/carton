@@ -31,7 +31,7 @@ declare -r CARTON_REPO_LIST_DIR="$CARTON_DATA_DIR/repo"
 # Args: str
 function carton_repo_list_is_valid_name()
 {
-    carton_is_valid_fs_name "$1"
+    carton_is_fs_name "$1"
 }
 
 # Output the list of repo names, one per line.

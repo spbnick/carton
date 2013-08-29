@@ -22,7 +22,7 @@ declare _CARTON_UTIL_SH=
 
 # Check if a string is suitable for use in a data sub-directory path.
 # Args: str
-function carton_is_valid_fs_name()
+function carton_is_fs_name()
 {
     declare -r str="$1"
     [[ "$str" =~ ^[A-Za-z0-9_-]+$ ]]
