@@ -23,6 +23,7 @@ declare _CARTON_PROJECT_SH=
 . carton_util.sh
 . carton_branch.sh
 . carton_commit.sh
+. thud_misc.sh
 
 # Length of hash used to tell apart commits with
 # the same version and revision number
@@ -32,7 +33,7 @@ declare -r _CARTON_PROJECT_SHORT_HASH_LEN=7
 # Args: dir
 declare -r _CARTON_PROJECT_LOAD_BASE='
     declare -r dir="$1";   shift
-    carton_assert "[ -d \"\$dir\" ]"
+    thud_assert "[ -d \"\$dir\" ]"
     declare -A project=(
         [dir]="$dir"
         [git_dir]="$dir/git"
@@ -46,7 +47,7 @@ declare -r _CARTON_PROJECT_LOAD_BASE='
 function carton_project_init()
 {
     declare -r arg_num="$#"
-    carton_assert '[[ $arg_num == 2 || $arg_num == 4 || $arg_num == 5 ]]'
+    thud_assert '[[ $arg_num == 2 || $arg_num == 4 || $arg_num == 5 ]]'
 
     eval "$_CARTON_PROJECT_LOAD_BASE"
     declare -r repo_url="$1";               shift
@@ -194,7 +195,7 @@ function carton_project_has_commit()
 function carton_project_add_commit()
 {
     eval "$_CARTON_PROJECT_GET_COMMIT_LOC"
-    carton_assert "! carton_project_has_commit \"\$project_str\" \
+    thud_assert "! carton_project_has_commit \"\$project_str\" \
                                                \"\$committish\""
     mkdir "$commit_dir"
     carton_commit_init "$commit_hash_short" "$commit_dir" < <(
@@ -209,7 +210,7 @@ function carton_project_add_commit()
 function carton_project_get_commit()
 {
     eval "$_CARTON_PROJECT_GET_COMMIT_LOC"
-    carton_assert "carton_project_has_commit \"\$project_str\" \
+    thud_assert "carton_project_has_commit \"\$project_str\" \
                                              \"\$committish\""
     carton_commit_load "$commit_hash_short" "$commit_dir"
 }
@@ -249,10 +250,10 @@ function carton_project_get_commit_rev_num()
 
     carton_arr_parse project <<<"$project_str"
 
-    carton_assert 'carton_project_has_commit "$project_str" "$committish"'
+    thud_assert 'carton_project_has_commit "$project_str" "$committish"'
     commit_str=`carton_project_get_commit "$project_str" "$committish"`
     carton_arr_parse commit <<<"$commit_str"
-    carton_assert '"${commit[is_built]}"'
+    thud_assert '"${commit[is_built]}"'
 
     tag_glob=`GIT_DIR="${project[git_dir]}" \
                 git config --get "carton.tag-glob"`
@@ -300,7 +301,7 @@ declare -r _CARTON_PROJECT_GET_BRANCH_LOC='
     declare -r branch_name="$1";   shift
     declare -A project
     carton_arr_parse project <<<"$project_str"
-    carton_assert "carton_branch_name_is_valid \"${project[git_dir]}\" \
+    thud_assert "carton_branch_name_is_valid \"${project[git_dir]}\" \
                                                \"\$branch_name\""
 '
 
@@ -334,7 +335,7 @@ function carton_project_has_branch()
 function carton_project_add_branch()
 {
     eval "$_CARTON_PROJECT_GET_BRANCH_LOC"
-    carton_assert '! carton_project_has_branch "$project_str" \
+    thud_assert '! carton_project_has_branch "$project_str" \
                                                "$branch_name"'
     GIT_DIR="${project[git_dir]}" \
         git branch --track "$branch_name" \
@@ -347,7 +348,7 @@ function carton_project_add_branch()
 function carton_project_del_branch()
 {
     eval "$_CARTON_PROJECT_GET_BRANCH_LOC"
-    carton_assert 'carton_project_has_branch "$project_str" \
+    thud_assert 'carton_project_has_branch "$project_str" \
                                              "$branch_name"'
     GIT_DIR="${project[git_dir]}" git branch -D "$branch_name" >/dev/null
 }
@@ -357,7 +358,7 @@ function carton_project_del_branch()
 function carton_project_get_branch()
 {
     eval "$_CARTON_PROJECT_GET_BRANCH_LOC"
-    carton_assert 'carton_project_has_branch "$project_str" \
+    thud_assert 'carton_project_has_branch "$project_str" \
                                              "$branch_name"'
     carton_branch_load "${project[git_dir]}" "$branch_name"
 }
@@ -403,7 +404,7 @@ function _carton_project_update_commit()
 function carton_project_update_commit_list()
 {
     declare -r arg_num="$#"
-    carton_assert '(( $arg_num >= 3 ))'
+    thud_assert '(( $arg_num >= 3 ))'
     declare -r project_str="$1";        shift
     declare -r channel_list_str="$1";   shift
     declare -A project
@@ -430,7 +431,7 @@ function carton_project_update_branch_new()
 {
     declare -r project_str="$1";    shift
     declare -r branch_name="$1";    shift
-    carton_assert 'carton_project_has_branch "$project_str" "$branch_name"'
+    thud_assert 'carton_project_has_branch "$project_str" "$branch_name"'
 
     declare -A project
     declare branch_str
@@ -457,7 +458,7 @@ function carton_project_update_branch_tags()
 {
     declare -r project_str="$1";    shift
     declare -r branch_name="$1";    shift
-    carton_assert 'carton_project_has_branch "$project_str" "$branch_name"'
+    thud_assert 'carton_project_has_branch "$project_str" "$branch_name"'
 
     declare -A project
     declare tag_glob
@@ -522,7 +523,7 @@ function carton_project_update_branch()
 {
     declare -r project_str="$1";    shift
     declare -r branch_name="$1";    shift
-    carton_assert 'carton_project_has_branch "$project_str" "$branch_name"'
+    thud_assert 'carton_project_has_branch "$project_str" "$branch_name"'
     carton_project_update_branch_new "$project_str" "$branch_name"
     carton_project_update_branch_tags "$project_str" "$branch_name"
 }
@@ -544,7 +545,7 @@ function carton_project_update()
 function carton_project_skip_branch()
 {
     eval "$_CARTON_PROJECT_GET_BRANCH_LOC"
-    carton_assert 'carton_project_has_branch "$project_str" \
+    thud_assert 'carton_project_has_branch "$project_str" \
                                              "$branch_name"'
     declare branch_str
     declare tag_glob

@@ -22,13 +22,6 @@ declare _CARTON_UTIL_SH=
 
 . thud_misc.sh
 
-# Evaluate and execute a command string, abort shell if unsuccessfull.
-# Args: [eval_arg]...
-function carton_assert()
-{
-    eval "$@" || thud_abort_frame 1 "Assertion failed: $@"
-}
-
 # Check if a string is suitable for use in a data sub-directory path.
 # Args: str
 function carton_is_valid_fs_name()
@@ -52,7 +45,7 @@ function carton_is_valid_var_name()
 function carton_arr_print()
 {
     declare -r _var="$1"
-    carton_assert 'carton_is_valid_var_name "$_var"'
+    thud_assert 'carton_is_valid_var_name "$_var"'
     declare -r _bs='\'
     declare _k
     declare _v
@@ -76,7 +69,7 @@ function carton_arr_print()
 function carton_arr_parse()
 {
     declare -r _var="$1"
-    carton_assert 'carton_is_valid_var_name "$_var"'
+    thud_assert 'carton_is_valid_var_name "$_var"'
     declare _k
     declare _v
     eval "

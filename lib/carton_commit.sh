@@ -22,13 +22,14 @@ declare _CARTON_COMMIT_SH=
 
 . carton_util.sh
 . carton_rev.sh
+. thud_misc.sh
 
 # Load base commit properties.
 # Args: dir
 declare -r _CARTON_COMMIT_LOAD_BASE='
     declare -r hash="$1";          shift
     declare -r dir="$1";           shift
-    carton_assert "[ -d \"\$dir\" ]"
+    thud_assert "[ -d \"\$dir\" ]"
 
     declare -A commit=(
         [hash]="$hash"
@@ -111,7 +112,7 @@ function carton_commit_load()
 declare -r _CARTON_COMMIT_GET_REV_LOC='
     declare -r commit_str="$1"; shift
     declare -r rev_num="$1";    shift
-    carton_assert "carton_rev_num_is_valid \"\$rev_num\""
+    thud_assert "carton_rev_num_is_valid \"\$rev_num\""
 
     declare -A commit
     carton_arr_parse commit <<<"$commit_str"
@@ -133,8 +134,8 @@ function carton_commit_has_rev()
 function carton_commit_add_rev()
 {
     eval "$_CARTON_COMMIT_GET_REV_LOC"
-    carton_assert '${commit[is_built]}'
-    carton_assert '! carton_commit_has_rev "$commit_str" "$rev_num"'
+    thud_assert '${commit[is_built]}'
+    thud_assert '! carton_commit_has_rev "$commit_str" "$rev_num"'
     mkdir "$rev_dir"
     carton_rev_init "$rev_dir" \
                     "${commit[dist_ver]}" "$rev_num" "${commit[hash]}" \
@@ -147,8 +148,8 @@ function carton_commit_add_rev()
 function carton_commit_get_rev()
 {
     eval "$_CARTON_COMMIT_GET_REV_LOC"
-    carton_assert '${commit[is_built]}'
-    carton_assert 'carton_commit_has_rev "$commit_str" "$rev_num"'
+    thud_assert '${commit[is_built]}'
+    thud_assert 'carton_commit_has_rev "$commit_str" "$rev_num"'
     carton_rev_load "$rev_dir" \
                     "${commit[dist_ver]}" "$rev_num" "${commit[hash]}"
 }
@@ -160,7 +161,7 @@ function carton_commit_add_or_get_rev()
 {
     declare -r commit_str="$1";    shift
     declare -r rev_num="$1";       shift
-    carton_assert 'carton_rev_num_is_valid "$rev_num"'
+    thud_assert 'carton_rev_num_is_valid "$rev_num"'
 
     if carton_commit_has_rev "$commit_str" "$rev_num"; then
         carton_commit_get_rev "$commit_str" "$rev_num"
@@ -174,7 +175,7 @@ function carton_commit_add_or_get_rev()
 function carton_commit_del_rev()
 {
     eval "$_CARTON_COMMIT_GET_REV_LOC"
-    carton_assert '${commit[is_built]}'
+    thud_assert '${commit[is_built]}'
     rm -Rf "$rev_dir"
 }
 

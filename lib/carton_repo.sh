@@ -21,12 +21,13 @@ if [ -z "${_CARTON_REPO_SH+set}" ]; then
 declare _CARTON_REPO_SH=
 
 . carton_util.sh
+. thud_misc.sh
 
 # Load base repository parameters
 # Args: dir
 declare -r _CARTON_REPO_LOAD_BASE='
     declare -r dir="$1";       shift
-    carton_assert "[ -d \"\$dir\" ]"
+    thud_assert "[ -d \"\$dir\" ]"
 
     declare -A repo=(
         [dir]="$dir"
@@ -171,7 +172,7 @@ function carton_repo_publish()
 {
     declare -r repo_str="$1"; shift
     declare -r rev_str="$1"; shift
-    carton_assert '! carton_repo_is_published "$repo_str" "$rev_str"'
+    thud_assert '! carton_repo_is_published "$repo_str" "$rev_str"'
     _carton_repo_update _carton_repo_add "$repo_str" "$rev_str"
 }
 
@@ -181,7 +182,7 @@ function carton_repo_withdraw()
 {
     declare -r repo_str="$1"; shift
     declare -r rev_str="$1"; shift
-    carton_assert 'carton_repo_is_published "$repo_str" "$rev_str"'
+    thud_assert 'carton_repo_is_published "$repo_str" "$rev_str"'
     _carton_repo_update _carton_repo_del "$repo_str" "$rev_str"
 }
 

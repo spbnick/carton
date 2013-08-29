@@ -22,6 +22,7 @@ declare _CARTON_CHANNEL_LIST_SH=
 
 . carton_util.sh
 . carton_channel.sh
+. thud_misc.sh
 
 # Check if a channel list string is valid.
 # Args: channel_list_str
@@ -45,7 +46,7 @@ function carton_channel_list_is_valid()
 # Args: channel_list_str rev_str
 declare -r _CARTON_CHANNEL_LIST_GET_WITH_REV_STR='
     declare -r channel_list_str="$1";   shift
-    carton_assert "carton_channel_list_is_valid \"\$channel_list_str\""
+    thud_assert "carton_channel_list_is_valid \"\$channel_list_str\""
     declare -r rev_str="$1";   shift
     declare -a channel_list
     read -r -a channel_list <<<"$channel_list_str"
@@ -72,7 +73,7 @@ function carton_channel_list_is_applicable()
 function carton_channel_list_is_published()
 {
     eval "$_CARTON_CHANNEL_LIST_GET_WITH_REV_STR"
-    carton_assert 'carton_channel_list_is_applicable "$channel_list_str" \
+    thud_assert 'carton_channel_list_is_applicable "$channel_list_str" \
                                                      "$rev_str"'
     declare channel
     if [ "${#channel_list[@]}" != 0 ]; then
@@ -91,9 +92,9 @@ function carton_channel_list_is_published()
 function carton_channel_list_publish()
 {
     eval "$_CARTON_CHANNEL_LIST_GET_WITH_REV_STR"
-    carton_assert 'carton_channel_list_is_applicable "$channel_list_str" \
+    thud_assert 'carton_channel_list_is_applicable "$channel_list_str" \
                                                      "$rev_str"'
-    carton_assert '! carton_channel_list_is_published "$channel_list_str" \
+    thud_assert '! carton_channel_list_is_published "$channel_list_str" \
                                                       "$rev_str"'
     declare channel
     if [ "${#channel_list[@]}" != 0 ]; then
@@ -110,7 +111,7 @@ function carton_channel_list_publish()
 function carton_channel_list_ensure_published()
 {
     eval "$_CARTON_CHANNEL_LIST_GET_WITH_REV_STR"
-    carton_assert 'carton_channel_list_is_applicable "$channel_list_str" \
+    thud_assert 'carton_channel_list_is_applicable "$channel_list_str" \
                                                      "$rev_str"'
     declare channel
     if [ "${#channel_list[@]}" != 0 ]; then
@@ -127,9 +128,9 @@ function carton_channel_list_ensure_published()
 function carton_channel_list_withdraw()
 {
     eval "$_CARTON_CHANNEL_LIST_GET_WITH_REV_STR"
-    carton_assert 'carton_channel_list_is_applicable "$channel_list_str" \
+    thud_assert 'carton_channel_list_is_applicable "$channel_list_str" \
                                                      "$rev_str"'
-    carton_assert 'carton_channel_list_is_published "$channel_list_str" \
+    thud_assert 'carton_channel_list_is_published "$channel_list_str" \
                                                     "$rev_str"'
     declare channel
     if [ "${#channel_list[@]}" != 0 ]; then

@@ -22,6 +22,7 @@ declare _CARTON_CHANNEL_SH=
 
 . carton_util.sh
 . carton_repo_list.sh
+. thud_misc.sh
 
 # Check if a string is a valid channel.
 # Args: str
@@ -36,7 +37,7 @@ function carton_channel_is_valid()
 # Args: channel rev_str
 declare -r _CARTON_CHANNEL_GET_WITH_REV_STR='
     declare -r channel="$1";   shift
-    carton_assert "carton_channel_is_valid \"\$channel\""
+    thud_assert "carton_channel_is_valid \"\$channel\""
     declare -r rev_str="$1";   shift
     declare -r channel_repo_name="${channel%%/*}"
     declare -r channel_ver_regex="${channel:${#channel_repo_name}+1}"
@@ -58,7 +59,7 @@ function carton_channel_is_applicable()
 function carton_channel_is_published()
 {
     eval "$_CARTON_CHANNEL_GET_WITH_REV_STR"
-    carton_assert 'carton_channel_is_applicable "$channel" "$rev_str"'
+    thud_assert 'carton_channel_is_applicable "$channel" "$rev_str"'
     declare repo_str
     repo_str=`carton_repo_list_get_repo "$channel_repo_name"`
     carton_repo_is_published "$repo_str" "$rev_str"
@@ -69,8 +70,8 @@ function carton_channel_is_published()
 function carton_channel_publish()
 {
     eval "$_CARTON_CHANNEL_GET_WITH_REV_STR"
-    carton_assert 'carton_channel_is_applicable "$channel" "$rev_str"'
-    carton_assert '! carton_channel_is_published "$channel" "$rev_str"'
+    thud_assert 'carton_channel_is_applicable "$channel" "$rev_str"'
+    thud_assert '! carton_channel_is_published "$channel" "$rev_str"'
     declare repo_str
     repo_str=`carton_repo_list_get_repo "$channel_repo_name"`
     carton_repo_publish "$repo_str" "$rev_str"
@@ -81,7 +82,7 @@ function carton_channel_publish()
 function carton_channel_ensure_published()
 {
     eval "$_CARTON_CHANNEL_GET_WITH_REV_STR"
-    carton_assert 'carton_channel_is_applicable "$channel" "$rev_str"'
+    thud_assert 'carton_channel_is_applicable "$channel" "$rev_str"'
     if ! carton_channel_is_published "$channel" "$rev_str"; then
         declare repo_str
         repo_str=`carton_repo_list_get_repo "$channel_repo_name"`
@@ -94,8 +95,8 @@ function carton_channel_ensure_published()
 function carton_channel_withdraw()
 {
     eval "$_CARTON_CHANNEL_GET_WITH_REV_STR"
-    carton_assert 'carton_channel_is_applicable "$channel" "$rev_str"'
-    carton_assert 'carton_channel_is_published "$channel" "$rev_str"'
+    thud_assert 'carton_channel_is_applicable "$channel" "$rev_str"'
+    thud_assert 'carton_channel_is_published "$channel" "$rev_str"'
     declare repo_str
     repo_str=`carton_repo_list_get_repo "$channel_repo_name"`
     carton_repo_withdraw "$repo_str" "$rev_str"

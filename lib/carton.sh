@@ -23,6 +23,7 @@ declare _CARTON_SH=
 . carton_util.sh
 . carton_project_list.sh
 . carton_repo_list.sh
+. thud_misc.sh
 
 declare -r CARTON_LOCK_FILE="$CARTON_DATA_DIR/lock.pid"
 declare -r CARTON_LOCK_INTERVAL="5s"
@@ -31,8 +32,8 @@ declare -r CARTON_LOCK_INTERVAL="5s"
 # Args: [timeout]
 function carton_lock()
 {
-    carton_assert '[ -d "$CARTON_DATA_DIR" ]'
-    carton_assert '[ -w "$CARTON_DATA_DIR" ]'
+    thud_assert '[ -d "$CARTON_DATA_DIR" ]'
+    thud_assert '[ -w "$CARTON_DATA_DIR" ]'
 
     declare deadline
     if [ -n "${1+set}" ]; then
@@ -65,21 +66,21 @@ function carton_owned()
 # Unlock the data directory locked by the current shell.
 function carton_unlock()
 {
-    carton_assert 'carton_owned'
+    thud_assert 'carton_owned'
     rm "$CARTON_LOCK_FILE"
 }
 
 # Unlock the data directory locked by any shell.
 function carton_breakin()
 {
-    carton_assert 'carton_locked'
+    thud_assert 'carton_locked'
     rm "$CARTON_LOCK_FILE"
 }
 
 # Initialize data directory.
 function carton_init()
 {
-    carton_assert "[ -d \"\$CARTON_DATA_DIR\" ]"
+    thud_assert "[ -d \"\$CARTON_DATA_DIR\" ]"
     mkdir "$CARTON_PROJECT_LIST_DIR"
     mkdir "$CARTON_REPO_LIST_DIR"
 }
@@ -87,7 +88,7 @@ function carton_init()
 # Cleanup data directory.
 function carton_cleanup()
 {
-    carton_assert "[ -d \"\$CARTON_DATA_DIR\" ]"
+    thud_assert "[ -d \"\$CARTON_DATA_DIR\" ]"
     rm -Rf "$CARTON_REPO_LIST_DIR"
     rm -Rf "$CARTON_PROJECT_LIST_DIR"
 }

@@ -22,6 +22,7 @@ declare _CARTON_PROJECT_LIST_SH=
 
 . carton_util.sh
 . carton_project.sh
+. thud_misc.sh
 
 # Repository directory
 declare -r CARTON_PROJECT_LIST_DIR="$CARTON_DATA_DIR/project"
@@ -36,7 +37,7 @@ function carton_project_list_is_valid_name()
 # Output the list of project names, one per line.
 function carton_project_list_list_projects()
 {
-    carton_assert "[ -d \"\$CARTON_PROJECT_LIST_DIR\" ]"
+    thud_assert "[ -d \"\$CARTON_PROJECT_LIST_DIR\" ]"
     ls -1 "$CARTON_PROJECT_LIST_DIR"
 }
 
@@ -44,8 +45,8 @@ function carton_project_list_list_projects()
 # Args: project_name
 declare -r _CARTON_PROJECT_LIST_GET_PROJECT_LOC='
     declare -r project_name="$1";   shift
-    carton_assert "carton_project_list_is_valid_name \"\$project_name\""
-    carton_assert "[ -d \"\$CARTON_PROJECT_LIST_DIR\" ]"
+    thud_assert "carton_project_list_is_valid_name \"\$project_name\""
+    thud_assert "[ -d \"\$CARTON_PROJECT_LIST_DIR\" ]"
     declare -r project_dir="$CARTON_PROJECT_LIST_DIR/$project_name"
 '
 
@@ -63,7 +64,7 @@ function carton_project_list_has_project()
 function carton_project_list_add_project()
 {
     eval "$_CARTON_PROJECT_LIST_GET_PROJECT_LOC"
-    carton_assert "! carton_project_list_has_project \"\$project_name\""
+    thud_assert "! carton_project_list_has_project \"\$project_name\""
     mkdir "$project_dir"
     carton_project_init "$project_dir" "$@"
 }
@@ -73,7 +74,7 @@ function carton_project_list_add_project()
 function carton_project_list_get_project()
 {
     eval "$_CARTON_PROJECT_LIST_GET_PROJECT_LOC"
-    carton_assert "carton_project_list_has_project \"\$project_name\""
+    thud_assert "carton_project_list_has_project \"\$project_name\""
     carton_project_load "$project_dir"
 }
 
@@ -82,7 +83,7 @@ function carton_project_list_get_project()
 function carton_project_list_del_project()
 {
     eval "$_CARTON_PROJECT_LIST_GET_PROJECT_LOC"
-    carton_assert 'carton_project_list_has_project "$project_name"'
+    thud_assert 'carton_project_list_has_project "$project_name"'
     # Override read-only permissions of unfinished builds
     chmod -R u+w -- "$project_dir"
     rm -Rf -- "$project_dir"

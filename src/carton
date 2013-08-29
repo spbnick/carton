@@ -54,7 +54,7 @@ function desc_parse()
             if [ -z "$line" ]; then
                 continue
             else
-                carton_assert '[ "$line" != "." ]'
+                thud_assert '[ "$line" != "." ]'
                 spec="$line"
             fi
         else
@@ -80,7 +80,7 @@ function desc_parse()
 function desc_opt_parse()
 {
     declare -r arg_num="$#"
-    carton_assert '((arg_num >= 6 && arg_num <= 7))'
+    thud_assert '((arg_num >= 6 && arg_num <= 7))'
     declare -A spec=(
         [index]="$1"
         [summary]="$2"
@@ -98,7 +98,7 @@ function desc_opt_parse()
 function desc_arg_parse()
 {
     declare -r arg_num="$#"
-    carton_assert '((arg_num >= 3 && arg_num <= 5))'
+    thud_assert '((arg_num >= 3 && arg_num <= 5))'
     declare -A spec=(
         [summary]="$2"
         [type]="${4-$3}"
@@ -113,7 +113,7 @@ function desc_arg_parse()
 function desc_cmd_parse()
 {
     declare -r arg_num="$#"
-    carton_assert '((arg_num >= 3))'
+    thud_assert '((arg_num >= 3))'
     declare index="$1";     shift
     declare summary="$1";   shift
     shift
@@ -265,7 +265,7 @@ function arg_branch_new_parse()
 
     declare -A params
     carton_arr_parse params <<<"$params_str"
-    carton_assert '[ -n "${params[project_old]+set}" ]'
+    thud_assert '[ -n "${params[project_old]+set}" ]'
     declare project_str
     project_str=`carton_project_list_get_project "${params[project_old]}"`
     declare -A project
@@ -289,7 +289,7 @@ function arg_branch_old_parse()
 
     declare -A params
     carton_arr_parse params <<<"$params_str"
-    carton_assert '[ -n "${params[project_old]+set}" ]'
+    thud_assert '[ -n "${params[project_old]+set}" ]'
     declare project_str
     project_str=`carton_project_list_get_project "${params[project_old]}"`
     declare -A project
@@ -849,7 +849,7 @@ function usage()
 function command_usage()
 {
     declare -r name="$1"
-    carton_assert '[ -n "${CMD_MAP[$name]+set}" ]'
+    thud_assert '[ -n "${CMD_MAP[$name]+set}" ]'
     declare -A desc
     declare -a opt_list
     declare -A opt_head_map=()
@@ -872,7 +872,7 @@ function command_usage()
         declare -A opt_desc
         declare opt_head
         for opt in "${opt_list[@]}"; do
-            carton_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
+            thud_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
             carton_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
             opt_head="-${opt_desc[short]}, --${opt_desc[long]}"
             opt_head+="${opt_desc[value]:+=${opt_desc[value]}}"
@@ -889,17 +889,17 @@ function command_usage()
         declare prev_arg_spec=""
         for arg_spec in "${arg_spec_list[@]}"; do
             if [[ "$arg_spec" == [*?] ]]; then
-                carton_assert '! "$got_star"'
+                thud_assert '! "$got_star"'
                 if [ "$arg_spec" == "*" ]; then
                     got_star=true
                 elif [ "$arg_spec" == "?" ]; then
-                    carton_assert '[ "$prev_arg_spec" != "?" ]'
+                    thud_assert '[ "$prev_arg_spec" != "?" ]'
                 fi
                 bracket_depth=$((bracket_depth + 1))
                 echo -n " ["
             else
                 declare -A arg_desc
-                carton_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
+                thud_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
                 carton_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
                 width=$((${#arg_desc[name]} > width
                                 ? ${#arg_desc[name]}
@@ -938,7 +938,7 @@ function command_usage()
         declare -A opt_desc
         declare opt_head
         for opt in "${opt_list[@]}"; do
-            carton_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
+            thud_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
             carton_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
             opt_head="${opt_head_map[$opt]}"
             while IFS= read -r line; do
@@ -957,7 +957,7 @@ function command_usage()
             if [[ "$arg_spec" != [*?] ]]; then
                 declare -A arg_desc
                 declare arg_name
-                carton_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
+                thud_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
                 carton_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
                 arg_name="${arg_desc[name]}"
                 while IFS= read -r line; do
@@ -999,7 +999,7 @@ function command()
         declare -A opt_desc
         declare opt_head
         for opt in "${opt_list[@]}"; do
-            carton_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
+            thud_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
             carton_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
             getopt_options+="${opt_desc[short]}"
             getopt_longoptions+=",${opt_desc[long]}"
@@ -1022,12 +1022,12 @@ function command()
                 command_usage "$name"; exit 0;;
             --) shift; break;;
             *)
-                carton_assert "[ "${#opt_list[@]}" != 0 ]"
+                thud_assert "[ "${#opt_list[@]}" != 0 ]"
                 declare opt
                 declare -A opt_desc
                 declare opt_head
                 for opt in "${opt_list[@]}"; do
-                    carton_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
+                    thud_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
                     carton_arr_parse opt_desc <<<"${OPT_MAP[$opt]}"
                     if [[ "-${opt_desc[short]}" == "$1" ||
                           "--${opt_desc[long]}" == "$1" ]]; then
@@ -1060,8 +1060,8 @@ function command()
         for ((i = 0; i < ${#arg_spec_list[@]}; i++)); do
             arg_spec="${arg_spec_list[i]}"
             if [[ "$arg_spec" == [*?] ]]; then
-                carton_assert '[ "$prev_arg_spec" != "*" ]'
-                carton_assert '[[ "$prev_arg_spec" != "?" || "$arg_spec" != "?" ]]'
+                thud_assert '[ "$prev_arg_spec" != "*" ]'
+                thud_assert '[[ "$prev_arg_spec" != "?" || "$arg_spec" != "?" ]]'
             else
                 if [ "$prev_arg_spec" == "*" ]; then
                     declare -a list=()
@@ -1079,7 +1079,7 @@ function command()
                             # Process argument
                             arg_spec="${arg_spec_list[j]}"
                             declare -A arg_desc
-                            carton_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
+                            thud_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
                             carton_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
                             carton_arr_parse list <<<"${params[${arg_spec}_list]}" 
                             value=`"arg_${arg_desc[type]}_parse" \
@@ -1103,7 +1103,7 @@ function command()
                     fi
                     # Process argument
                     declare -A arg_desc
-                    carton_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
+                    thud_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
                     carton_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
                     params[$arg_spec]=`
                         "arg_${arg_desc[type]}_parse" \

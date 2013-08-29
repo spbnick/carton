@@ -128,19 +128,10 @@ ep_suite_begin publish; (
             ep_suite_init
             carton_repo_list_add_repo repo >/dev/null
             ep_teardown_push carton_repo_list_del_repo repo
-            ep_test_begin do -e1; (
+            ep_test_begin do -e$((`kill -l ABRT` | 0x80)); (
                 ep_test_init
                 carton_channel_publish repo/^1 "$v1_r_1" 2>/dev/null
             ); ep_test_end
-        ); ep_suite_end
-
-        ep_suite_begin verify; (
-            ep_suite_init
-            declare repo
-            repo=`carton_repo_list_add_repo repo`
-            ep_teardown_push carton_repo_list_del_repo repo
-            (carton_channel_publish repo/^1 "$v1_r_1" 2>/dev/null) || true
-            ep_test is_not_published -e1 carton_repo_is_published "$repo" "$v1_r_1"
         ); ep_suite_end
     ); ep_suite_end
 ); ep_suite_end

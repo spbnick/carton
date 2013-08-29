@@ -22,6 +22,7 @@ declare _CARTON_REPO_LIST_SH=
 
 . carton_util.sh
 . carton_repo.sh
+. thud_misc.sh
 
 # Repository directory
 declare -r CARTON_REPO_LIST_DIR="$CARTON_DATA_DIR/repo"
@@ -36,7 +37,7 @@ function carton_repo_list_is_valid_name()
 # Output the list of repo names, one per line.
 function carton_repo_list_list_repos()
 {
-    carton_assert "[ -d \"\$CARTON_REPO_LIST_DIR\" ]"
+    thud_assert "[ -d \"\$CARTON_REPO_LIST_DIR\" ]"
     ls "$CARTON_REPO_LIST_DIR"
 }
 
@@ -44,8 +45,8 @@ function carton_repo_list_list_repos()
 # Args: repo_name
 declare -r _CARTON_REPO_LIST_GET_REPO_LOC='
     declare -r repo_name="$1";   shift
-    carton_assert "carton_repo_list_is_valid_name \"\$repo_name\""
-    carton_assert "[ -d \"\$CARTON_REPO_LIST_DIR\" ]"
+    thud_assert "carton_repo_list_is_valid_name \"\$repo_name\""
+    thud_assert "[ -d \"\$CARTON_REPO_LIST_DIR\" ]"
     declare -r repo_dir="$CARTON_REPO_LIST_DIR/$repo_name"
 '
 
@@ -63,7 +64,7 @@ function carton_repo_list_has_repo()
 function carton_repo_list_add_repo()
 {
     eval "$_CARTON_REPO_LIST_GET_REPO_LOC"
-    carton_assert "! carton_repo_list_has_repo \"\$repo_name\""
+    thud_assert "! carton_repo_list_has_repo \"\$repo_name\""
     mkdir "$repo_dir"
     carton_repo_init "$repo_dir" "$@"
 }
@@ -85,7 +86,7 @@ function carton_repo_list_add_repo_list()
 function carton_repo_list_get_repo()
 {
     eval "$_CARTON_REPO_LIST_GET_REPO_LOC"
-    carton_assert "carton_repo_list_has_repo \"\$repo_name\""
+    thud_assert "carton_repo_list_has_repo \"\$repo_name\""
     carton_repo_load "$repo_dir"
 }
 
@@ -94,7 +95,7 @@ function carton_repo_list_get_repo()
 function carton_repo_list_del_repo()
 {
     eval "$_CARTON_REPO_LIST_GET_REPO_LOC"
-    carton_assert "carton_repo_list_has_repo \"\$repo_name\""
+    thud_assert "carton_repo_list_has_repo \"\$repo_name\""
     rm -Rf -- "$repo_dir"
 }
 

@@ -22,13 +22,14 @@ declare _CARTON_BRANCH_SH=
 
 . carton_util.sh
 . carton_channel_list.sh
+. thud_misc.sh
 
 # Check if a branch name is valid.
 # Args: git_dir name
 function carton_branch_name_is_valid()
 {
     declare -r git_dir="$1";    shift
-    carton_assert '[ -d "$git_dir" ]'
+    thud_assert '[ -d "$git_dir" ]'
     declare -r name="$1";       shift
     GIT_DIR="$git_dir" git check-ref-format "refs/heads/$name" >/dev/null
 }
@@ -37,9 +38,9 @@ function carton_branch_name_is_valid()
 # Args: git_dir name
 declare -r _CARTON_BRANCH_LOAD_BASE='
     declare -r git_dir="$1";    shift
-    carton_assert "[ -d \"\$git_dir\" ]"
+    thud_assert "[ -d \"\$git_dir\" ]"
     declare -r name="$1";   shift
-    carton_assert "carton_branch_name_is_valid \"\$git_dir\" \"\$name\""
+    thud_assert "carton_branch_name_is_valid \"\$git_dir\" \"\$name\""
 
     declare -A branch=(
         [git_dir]="$git_dir"
@@ -60,7 +61,7 @@ function carton_branch_init()
     else
         channel_list_str=""
     fi
-    carton_assert 'carton_channel_list_is_valid "$channel_list_str"'
+    thud_assert 'carton_channel_list_is_valid "$channel_list_str"'
     GIT_DIR="${branch[git_dir]}" \
         git config "branch.${branch[name]}.carton-channel-list" \
                    "$channel_list_str"
@@ -110,7 +111,7 @@ function carton_branch_get_channel_list()
 {
     declare channel_list_str
     channel_list_str=`_carton_branch_config_get "$1" "channel-list"`
-    carton_assert 'carton_channel_list_is_valid "$channel_list_str"'
+    thud_assert 'carton_channel_list_is_valid "$channel_list_str"'
     echo -n "$channel_list_str"
 }
 
@@ -120,7 +121,7 @@ function carton_branch_set_channel_list()
 {
     declare -r branch_str="$1";         shift
     declare -r channel_list_str="$1";   shift
-    carton_assert 'carton_channel_list_is_valid "$channel_list_str"'
+    thud_assert 'carton_channel_list_is_valid "$channel_list_str"'
     _carton_branch_config_set "$branch_str" "channel-list" "$channel_list_str"
 }
 

@@ -21,6 +21,7 @@ if [ -z "${_CARTON_REV_SH+set}" ]; then
 declare _CARTON_REV_SH=
 
 . carton_util.sh
+. thud_misc.sh
 
 # Check if a string is a valid revision number.
 # Args: str
@@ -35,11 +36,11 @@ function carton_rev_num_is_valid()
 # Args: _dir _num _dist_dir
 declare -r _CARTON_REV_LOAD_BASE='
     declare -r dir="$1";    shift
-    carton_assert "[ -d \"\$dir\" ]"
+    thud_assert "[ -d \"\$dir\" ]"
     declare -r ver="$1";    shift
     declare -r num="$1";    shift
     declare -r hash="$1";   shift
-    carton_assert "carton_rev_num_is_valid \"\$num\""
+    thud_assert "carton_rev_num_is_valid \"\$num\""
 
     declare -A rev=(
         [dir]="$dir"
@@ -123,7 +124,7 @@ function carton_rev_init()
 {
     eval "$_CARTON_REV_LOAD_BASE"
     declare -r dist_dir="$1";   shift
-    carton_assert "[ -d \"\$dist_dir\" ]"
+    thud_assert "[ -d \"\$dist_dir\" ]"
     _carton_rev_build_rpm "$dist_dir" \
                           "${rev[rpm_dir]}" \
                           "${rev[rpm_log]}" \
