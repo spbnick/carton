@@ -81,22 +81,6 @@ function carton_is_valid_var_name()
     [[ "$1" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]
 }
 
-# Copy (associative) array contents.
-# Args: _dst _src
-function carton_arr_copy()
-{
-    declare _dst="$1";  shift
-    declare _src="$1";  shift
-    declare _k
-
-    eval "
-        $_dst=()
-        for _k in \"\${!$_src[@]}\"; do
-            $_dst[\$_k]=\"\${$_src[\$_k]}\"
-        done
-    "
-}
-
 # Output an (associative) array.
 # Args: _var
 # Output: the array with keys and values on separate lines with newlines
