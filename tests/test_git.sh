@@ -20,7 +20,7 @@
 if [ -z "${_TEST_GIT_SH+set}" ]; then
 declare _TEST_GIT_SH=
 
-. carton_util.sh
+. thud_misc.sh
 
 # Initialize repo
 # Args: [dir]
@@ -47,21 +47,21 @@ function test_git_commit_master_pre_build()
 function test_git_commit_master_v1()
 (
     cd "${1-.}"
-    carton_unindent <<<'
+    thud_unindent <<<'
         set -o errexit
         aclocal
         automake --add-missing --copy
         autoconf
     ' > bootstrap
     chmod a+x bootstrap
-    carton_unindent <<<'
+    thud_unindent <<<'
         AC_PREREQ(2.60)
         AC_INIT([carton-test], [1])
         AM_INIT_AUTOMAKE([1.10 -Wall foreign])
         AC_CONFIG_FILES([Makefile])
         AC_OUTPUT
     ' > configure.ac
-    carton_unindent <<<'
+    thud_unindent <<<'
         dist_pkgdata_DATA =
         dist_pkgdata_DATA += a
         dist_pkgdata_DATA += b
@@ -78,7 +78,7 @@ function test_git_commit_master_v1()
 function test_git_commit_master_spec()
 (
     cd "${1-.}"
-    carton_unindent <<<'
+    thud_unindent <<<'
         Name:       carton-test
         Version:    1
         Release:    1%{?rev}%{?dist}

@@ -22,6 +22,7 @@ set -o errexit -o nounset -o pipefail
 shopt -s extdebug extglob
 eval "`carton-env || echo exit 1`"
 . carton.sh
+. thud_misc.sh
 
 # Description-parsing function interface.
 # Args: index summary name [spec_arg...]
@@ -68,7 +69,7 @@ function desc_parse()
                 summary=
             fi
         fi
-    done < <(carton_unindent)
+    done < <(thud_unindent)
 
     carton_arr_print map
 }
@@ -802,7 +803,7 @@ done
 # Output options part of global usage information.
 function usage_options()
 {
-    carton_unindent <<<"\
+    thud_unindent <<<"\
         Global options:
             -h, --help  Output global options and commands and exit.
     "
@@ -816,7 +817,7 @@ function usage()
     declare -A desc
     declare line
 
-    carton_unindent <<<"\
+    thud_unindent <<<"\
         Usage: `basename \"\$0\"` [GLOBAL_OPTION...] COMMAND [COMMAND_ARG...]
         Execute a Carton build server command.
     "
