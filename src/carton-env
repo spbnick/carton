@@ -19,6 +19,10 @@
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA 02110-1301, USA.
 
+set +o errexit
+
+thud-env
+
 cat <<EOF
 if [ -z "\${_CARTON_ENV_SH+set}" ]; then
 declare _CARTON_ENV_SH=

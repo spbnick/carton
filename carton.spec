@@ -10,6 +10,7 @@ Source:     %{name}-%{version}.tar.gz
 Requires:   git
 Requires:   rpm-build
 Requires:   createrepo
+Requires:   thud
 
 %description
 
