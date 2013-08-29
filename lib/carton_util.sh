@@ -20,29 +20,7 @@
 if [ -z "${_CARTON_UTIL_SH+set}" ]; then
 declare _CARTON_UTIL_SH=
 
-# Output a backtrace
-# Args: [start_frame]
-function carton_backtrace()
-{
-    declare start_frame=${1-0}
-    carton_assert '(( "$start_frame" >= 0 ))'
-
-    declare frame
-    declare argv=0
-    declare argc
-
-    for ((frame = 0; frame < ${#BASH_LINENO[@]} - 1; frame++)); do
-        if ((frame > start_frame)); then
-            echo -n "${BASH_SOURCE[frame+1]}:${BASH_LINENO[frame]}" \
-                    "${FUNCNAME[frame]}"
-            for ((argc = ${BASH_ARGC[frame]}; argc > 0; argc--)); do
-                printf ' %q' "${BASH_ARGV[argv + argc - 1]}"
-            done
-            echo
-        fi
-        argv=$((argv + BASH_ARGC[frame]))
-    done
-}
+. thud_misc.sh
 
 # Abort shell, optionally outputting a message to stderr.
 # Args: [frame [echo_arg]...]
@@ -52,7 +30,7 @@ function carton_abort()
     carton_assert '(( "$frame" >= 0 ))'
 
     if [ $# != 0 ]; then
-        carton_backtrace "$((frame + 1))" >&2
+        thud_backtrace "$((frame + 1))" >&2
         echo "$@" >&2
     fi
     exit 1
