@@ -88,10 +88,6 @@ function carton_repo_is_published()
     return 0
 }
 
-#
-# TODO Atomic publishing/withdrawing
-#
-
 # Update repo with a revision atomically, executing specified command with
 # repo_str and rev_str arguments.
 # Args: command repo_str rev_str
