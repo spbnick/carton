@@ -18,12 +18,15 @@
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA 02110-1301, USA.
 
-set -o errexit -o nounset -o pipefail
-shopt -s extdebug extglob
+set -o errexit
 eval "`carton-env || echo exit 1`"
 . carton.sh
 . thud_misc.sh
 . thud_arr.sh
+. thud_strict.sh
+
+thud_strict_on
+shopt -s extdebug extglob
 
 # Description-parsing function interface.
 # Args: index summary name [spec_arg...]

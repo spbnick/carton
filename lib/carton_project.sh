@@ -59,7 +59,7 @@ function carton_project_init()
     (
         export GIT_DIR="${project[git_dir]}"
         git init --quiet --bare
-        echo "ref: refs/heads/CARTON_INVALID" > "$GIT_DIR/HEAD"
+        echo "ref: refs/heads/CARTON_INVALID" >| "$GIT_DIR/HEAD"
         git config carton.tag-glob "$tag_glob"
         git config carton.tag-format "$tag_format"
         git config carton.update-max-age "$update_max_age"

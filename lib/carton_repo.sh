@@ -138,7 +138,7 @@ function _carton_repo_update()
         echo -n "End: "
         date --rfc-2822
         exit "$status"
-    ) > "${repo[rpm_log]}" 2>&1
+    ) >| "${repo[rpm_log]}" 2>&1
 }
 
 # Add revision packages to a repo directory.
