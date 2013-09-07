@@ -141,8 +141,8 @@ function desc_cmd_parse()
     spec=(
         [index]="$index"
         [summary]="$summary"
-        [opt_list]=`thud_arr_print opt_list`
-        [arg_spec_list]=`thud_arr_print arg_spec_list`
+        [opt_list]="`thud_arr_print opt_list`"
+        [arg_spec_list]="`thud_arr_print arg_spec_list`"
     )
     thud_arr_print spec
 }
