@@ -89,9 +89,9 @@ function test_commit()
                 ep_test is_built [ "${rev[is_built]}" == "$is_built" ]
                 if $is_built; then
                     ep_test has_rpm ls -l \
-                        "${rev[rpm_dir]}/RPMS/noarch/carton-test-$dist_ver-$release.noarch.rpm"
+                        "${rev[rpm_dir]}/RPMS/noarch/carton-test-$dist_ver-$release."*noarch.rpm
                     ep_test has_srpm ls -l \
-                        "${rev[rpm_dir]}/SRPMS/carton-test-$dist_ver-$release.src.rpm"
+                        "${rev[rpm_dir]}/SRPMS/carton-test-$dist_ver-$release."*src.rpm
                 fi
             ); ep_suite_end
         ); ep_suite_end
@@ -121,9 +121,9 @@ function test_commit()
                 ep_test is_built [ "${rev[is_built]}" == "$is_built" ]
                 if $is_built; then
                     ep_test has_rpm test -f \
-                        "${rev[rpm_dir]}/RPMS/noarch/carton-test-$dist_ver-$release.noarch.rpm"
+                        "${rev[rpm_dir]}/RPMS/noarch/carton-test-$dist_ver-$release."*noarch.rpm
                     ep_test has_srpm test -f \
-                        "${rev[rpm_dir]}/SRPMS/carton-test-$dist_ver-$release.src.rpm"
+                        "${rev[rpm_dir]}/SRPMS/carton-test-$dist_ver-$release."*src.rpm
                 fi
             ); ep_suite_end
         ); ep_suite_end

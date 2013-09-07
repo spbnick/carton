@@ -121,8 +121,8 @@ ep_suite_begin publish; (
         declare -A repo
         thud_arr_parse repo <<<"$repo_str"
         carton_repo_publish "$repo_str" "$rev_str"
-        ep_test rpm test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc.noarch.rpm"
-        ep_test srpm test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc.src.rpm"
+        ep_test rpm test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc."*noarch.rpm
+        ep_test srpm test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc."*src.rpm
     ); ep_suite_end
 ); ep_suite_end
 
@@ -153,9 +153,9 @@ ep_suite_begin withdraw; (
         carton_repo_publish "$repo_str" "$rev_str"
         carton_repo_withdraw "$repo_str" "$rev_str"
         ep_test rpm eval \
-                '! test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc.noarch.rpm"'
+                '! test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc."*noarch.rpm'
         ep_test srpm eval \
-                '! test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc.src.rpm"'
+                '! test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc."*src.rpm'
     ); ep_suite_end
 ); ep_suite_end
 
