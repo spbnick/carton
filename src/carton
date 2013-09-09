@@ -850,7 +850,7 @@ function usage()
 
 # Output a command usage information.
 # Args: name
-function command_usage()
+function usage_cmd()
 {
     declare -r name="$1"
     thud_assert '[ -n "${CMD_MAP[$name]+set}" ]'
@@ -976,7 +976,7 @@ function command_usage()
 
 # Execute a command
 # Args: name [arg]...
-function command()
+function cmd()
 {
     declare -r name="$1";   shift
     declare -A desc
@@ -1018,12 +1018,12 @@ function command()
     args_expr=`getopt --name \`basename "\$0"\` \
                       --options "$getopt_options" \
                       --longoptions "$getopt_longoptions" \
-                      -- "$@"` || { command_usage "$name" >&2; exit 1; }
+                      -- "$@"` || { usage_cmd "$name" >&2; exit 1; }
     eval set -- "$args_expr"
     while true; do
         case "$1" in
             -h|--help)
-                command_usage "$name"; exit 0;;
+                usage_cmd "$name"; exit 0;;
             --) shift; break;;
             *)
                 thud_assert "[ "${#opt_list[@]}" != 0 ]"
@@ -1039,13 +1039,13 @@ function command()
                             params[$opt]=`
                                 "opt_${opt_desc[type]}_parse" \
                                     "\`thud_arr_print params\`" "$2"` ||
-                                { command_usage "$name" >&2; exit 1; }
+                                { usage_cmd "$name" >&2; exit 1; }
                             shift
                         else
                             params[$opt]=`
                                 "opt_${opt_desc[type]}_parse" \
                                     "\`thud_arr_print params\`"` ||
-                                { command_usage "$name" >&2; exit 1; }
+                                { usage_cmd "$name" >&2; exit 1; }
                         fi
                         shift
                         break;
@@ -1077,7 +1077,7 @@ function command()
                         for ((j = i; j < ${#arg_spec_list[@]}; j++)); do
                             if [ "$#" == 0 ]; then
                                 echo "Invalid number of positional arguments." >&2
-                                command_usage "$name" >&2
+                                usage_cmd "$name" >&2
                                 exit 1
                             fi
                             # Process argument
@@ -1088,7 +1088,7 @@ function command()
                             thud_arr_parse list <<<"${params[${arg_spec}_list]}" 
                             value=`"arg_${arg_desc[type]}_parse" \
                                     "\`thud_arr_print params\`" "$1"` ||
-                                        { command_usage "$name" >&2; exit 1; }
+                                        { usage_cmd "$name" >&2; exit 1; }
                             list+=("$value")
                             params[${arg_spec}_list]=`thud_arr_print list`
                             shift
@@ -1101,7 +1101,7 @@ function command()
                             break
                         else
                             echo "Invalid number of positional arguments." >&2
-                            command_usage "$name" >&2
+                            usage_cmd "$name" >&2
                             exit 1
                         fi
                     fi
@@ -1112,7 +1112,7 @@ function command()
                     params[$arg_spec]=`
                         "arg_${arg_desc[type]}_parse" \
                             "\`thud_arr_print params\`" "$1"` ||
-                        { command_usage "$name" >&2; exit 1; }
+                        { usage_cmd "$name" >&2; exit 1; }
                     shift
                 fi
             fi
@@ -1162,4 +1162,4 @@ carton_lock "10 minutes" || {
     exit 1
 }
 trap carton_unlock EXIT
-command "$@"
+cmd "$@"
