@@ -86,7 +86,7 @@ function _carton_project_config_get()
 {
     declare -r project_str="$1";    shift
     declare -r name="$1";           shift
-    declare -A project
+    declare -A project=()
     thud_arr_parse project <<<"$project_str"
     GIT_DIR="${project[git_dir]}" git config --get "carton.$name"
 }
@@ -98,7 +98,7 @@ function _carton_project_config_set()
     declare -r project_str="$1";    shift
     declare -r name="$1";           shift
     declare -r value="$1";          shift
-    declare -A project
+    declare -A project=()
     thud_arr_parse project <<<"$project_str"
     GIT_DIR="${project[git_dir]}" git config "carton.$name" "$value"
 }
@@ -151,7 +151,7 @@ function carton_project_get_update_max_age_epoch()
 function carton_project_fetch()
 {
     declare -r project_str="$1";   shift
-    declare -A project
+    declare -A project=()
     thud_arr_parse project <<<"$project_str"
     GIT_DIR="${project[git_dir]}" git fetch --quiet
 }
@@ -160,7 +160,7 @@ declare -r _CARTON_PROJECT_GET_COMMIT_LOC='
     declare -r project_str="$1";   shift
     declare -r committish="$1";    shift
 
-    declare -A project
+    declare -A project=()
     thud_arr_parse project <<<"$project_str"
 
     declare commit_hash
@@ -178,7 +178,7 @@ function carton_project_has_commit()
     declare -r project_str="$1";   shift
     declare -r committish="$1";    shift
 
-    declare -A project
+    declare -A project=()
     thud_arr_parse project <<<"$project_str"
 
     declare commit_hash
@@ -238,9 +238,9 @@ function carton_project_get_commit_rev_num()
 {
     declare -r project_str="$1";   shift
     declare -r committish="$1";    shift
-    declare -A project
+    declare -A project=()
     declare commit_str
-    declare -A commit
+    declare -A commit=()
     declare tag_glob
     declare tag_format
     declare ver_tag_name
@@ -300,7 +300,7 @@ function carton_project_del_commit()
 declare -r _CARTON_PROJECT_GET_BRANCH_LOC='
     declare -r project_str="$1";   shift
     declare -r branch_name="$1";   shift
-    declare -A project
+    declare -A project=()
     thud_arr_parse project <<<"$project_str"
     thud_assert "carton_branch_name_is_valid \"${project[git_dir]}\" \
                                                \"\$branch_name\""
@@ -311,7 +311,7 @@ declare -r _CARTON_PROJECT_GET_BRANCH_LOC='
 function carton_project_list_branches()
 {
     declare -r project_str="$1";   shift
-    declare -A project
+    declare -A project=()
     thud_arr_parse project <<<"$project_str"
     declare ref
 
@@ -373,10 +373,10 @@ function _carton_project_update_commit()
     declare -r committish="$1";     shift
 
     declare commit_str
-    declare -A commit
+    declare -A commit=()
     declare rev_num
     declare rev_str
-    declare -A rev
+    declare -A rev=()
 
     commit_str=`carton_project_add_or_get_commit "$project_str" "$committish"`
     thud_arr_parse commit <<<"$commit_str"
@@ -408,7 +408,7 @@ function carton_project_update_commit_list()
     thud_assert '(( $arg_num >= 3 ))'
     declare -r project_str="$1";        shift
     declare -r channel_list_str="$1";   shift
-    declare -A project
+    declare -A project=()
     declare max_age_epoch
     declare commit_hash
 
@@ -434,7 +434,7 @@ function carton_project_update_branch_new()
     declare -r branch_name="$1";    shift
     thud_assert 'carton_project_has_branch "$project_str" "$branch_name"'
 
-    declare -A project
+    declare -A project=()
     declare branch_str
     declare channel_list
 
@@ -461,13 +461,13 @@ function carton_project_update_branch_tags()
     declare -r branch_name="$1";    shift
     thud_assert 'carton_project_has_branch "$project_str" "$branch_name"'
 
-    declare -A project
+    declare -A project=()
     declare tag_glob
     declare branch_str
     declare channel_list
     declare tag_list_str
-    declare -a tag_list
-    declare -A tag_map
+    declare -a tag_list=()
+    declare -A tag_map=()
     declare tag
     declare new_tag_list_str
     declare desc

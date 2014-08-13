@@ -29,7 +29,7 @@ declare _CARTON_CHANNEL_LIST_SH=
 function carton_channel_list_is_valid()
 {
     declare -r channel_list_str="$1";   shift
-    declare -a channel_list
+    declare -a channel_list=()
     declare channel
     read -r -a channel_list <<<"$channel_list_str"
     if [ "${#channel_list[@]}" != 0 ]; then
@@ -48,7 +48,7 @@ declare -r _CARTON_CHANNEL_LIST_GET_WITH_REV_STR='
     declare -r channel_list_str="$1";   shift
     thud_assert "carton_channel_list_is_valid \"\$channel_list_str\""
     declare -r rev_str="$1";   shift
-    declare -a channel_list
+    declare -a channel_list=()
     read -r -a channel_list <<<"$channel_list_str"
 '
 

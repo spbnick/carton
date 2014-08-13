@@ -115,7 +115,7 @@ declare -r _CARTON_COMMIT_GET_REV_LOC='
     declare -r rev_num="$1";    shift
     thud_assert "carton_rev_num_is_valid \"\$rev_num\""
 
-    declare -A commit
+    declare -A commit=()
     thud_arr_parse commit <<<"$commit_str"
 
     declare -r rev_dir="${commit[rev_dir]}/$rev_num"

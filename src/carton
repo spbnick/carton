@@ -51,7 +51,7 @@ function desc_parse()
     declare index=0
     declare spec=
     declare summary=
-    declare -a spec_array
+    declare -a spec_array=()
 
     while read -r line; do
         if [ -z "$spec" ]; then
@@ -267,12 +267,12 @@ function arg_branch_new_parse()
     declare -r params_str="$1"; shift
     declare -r value="$1";      shift
 
-    declare -A params
+    declare -A params=()
     thud_arr_parse params <<<"$params_str"
     thud_assert '[ -n "${params[project_old]+set}" ]'
     declare project_str
     project_str=`carton_project_list_get_project "${params[project_old]}"`
-    declare -A project
+    declare -A project=()
     thud_arr_parse project <<<"$project_str"
 
     if carton_project_has_branch "$project_str" "$value"; then
@@ -291,12 +291,12 @@ function arg_branch_old_parse()
     declare -r params_str="$1"; shift
     declare -r value="$1";      shift
 
-    declare -A params
+    declare -A params=()
     thud_arr_parse params <<<"$params_str"
     thud_assert '[ -n "${params[project_old]+set}" ]'
     declare project_str
     project_str=`carton_project_list_get_project "${params[project_old]}"`
-    declare -A project
+    declare -A project=()
     thud_arr_parse project <<<"$project_str"
 
     if ! carton_project_has_branch "$project_str" "$value"; then
@@ -373,7 +373,7 @@ declare -r ARG_DESC_TEXT="
 # Input: params_str
 function cmd_init()
 {
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
     carton_init
 }
@@ -382,7 +382,7 @@ function cmd_init()
 # Input: params_str
 function cmd_cleanup()
 {
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
     carton_cleanup
 }
@@ -391,9 +391,9 @@ function cmd_cleanup()
 # Input: params_str
 function cmd_repo_list()
 {
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
-    declare -a pattern_list
+    declare -a pattern_list=()
     thud_arr_parse pattern_list <<<"${params[repo_pattern_list]}"
     declare name
     declare pattern
@@ -416,9 +416,9 @@ function cmd_repo_list()
 # Input: params_str
 function cmd_repo_add()
 {
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
-    declare -a repo_list
+    declare -a repo_list=()
     thud_arr_parse repo_list <<<"${params[repo_new_list]}"
     if [ "${#repo_list[@]}" != 0 ]; then
         carton_repo_list_add_repo_list "${repo_list[@]}" >/dev/null
@@ -429,9 +429,9 @@ function cmd_repo_add()
 # Input: params_str
 function cmd_repo_del()
 {
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
-    declare -a pattern_list
+    declare -a pattern_list=()
     thud_arr_parse pattern_list <<<"${params[repo_pattern_list]}"
     declare name
     declare pattern
@@ -452,9 +452,9 @@ function cmd_repo_del()
 # Input: params_str
 function cmd_project_list()
 {
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
-    declare -a pattern_list
+    declare -a pattern_list=()
     thud_arr_parse pattern_list <<<"${params[project_pattern_list]}"
     declare name
     declare pattern
@@ -477,7 +477,7 @@ function cmd_project_list()
 # Input: params_str
 function cmd_project_add()
 {
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
     carton_project_list_add_project "${params[project_new]}" \
                                     "${params[git_repo]}" \
@@ -490,9 +490,9 @@ function cmd_project_add()
 # Input: params_str
 function cmd_project_del()
 {
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
-    declare -a pattern_list
+    declare -a pattern_list=()
     thud_arr_parse pattern_list <<<"${params[project_pattern_list]}"
     declare name
     declare pattern
@@ -515,9 +515,9 @@ function cmd_project_del()
 function cmd_project_cmd()
 {
     declare -r cmd="$1";    shift
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
-    declare -a pattern_list
+    declare -a pattern_list=()
     thud_arr_parse pattern_list <<<"${params[project_pattern_list]}"
     declare name
     declare pattern
@@ -560,12 +560,12 @@ function cmd_project_update()
 # Input: params_str
 function cmd_branch_list()
 {
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
     declare -r project_name="${params[project_old]}"
     declare project_str
     project_str=`carton_project_list_get_project "$project_name"`
-    declare -a pattern_list
+    declare -a pattern_list=()
     thud_arr_parse pattern_list <<<"${params[branch_pattern_list]}"
     declare name
     declare pattern
@@ -588,12 +588,12 @@ function cmd_branch_list()
 # Input: params_str
 function cmd_branch_add()
 {
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
     declare -r project_name="${params[project_old]}"
     declare project_str
     project_str=`carton_project_list_get_project "$project_name"`
-    declare -a channel_list
+    declare -a channel_list=()
     thud_arr_parse channel_list <<<"${params[channel_list]}"
 
     if [ "${#channel_list[@]}" == 0 ]; then
@@ -610,12 +610,12 @@ function cmd_branch_add()
 # Input: params_str
 function cmd_branch_del()
 {
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
     declare -r project_name="${params[project_old]}"
     declare project_str
     project_str=`carton_project_list_get_project "$project_name"`
-    declare -a pattern_list
+    declare -a pattern_list=()
     thud_arr_parse pattern_list <<<"${params[branch_pattern_list]}"
     declare name
     declare pattern
@@ -639,12 +639,12 @@ function cmd_branch_del()
 function cmd_branch_project_cmd()
 {
     declare -r cmd="$1";    shift
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
     declare -r project_name="${params[project_old]}"
     declare project_str
     project_str=`carton_project_list_get_project "$project_name"`
-    declare -a pattern_list
+    declare -a pattern_list=()
     thud_arr_parse pattern_list <<<"${params[branch_pattern_list]}"
     declare name
     declare pattern
@@ -679,7 +679,7 @@ function cmd_branch_update()
 # Input: params_str
 function cmd_branch_get_channels()
 {
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
     declare -r project_name="${params[project_old]}"
     declare project_str
@@ -695,7 +695,7 @@ function cmd_branch_get_channels()
 # Input: params_str
 function cmd_branch_set_channels()
 {
-    declare -A params
+    declare -A params=()
     thud_arr_parse params
     declare -r project_name="${params[project_old]}"
     declare project_str
@@ -703,7 +703,7 @@ function cmd_branch_set_channels()
     declare -r name="${params[branch_old]}"
     declare branch_str
     branch_str=`carton_project_get_branch "$project_str" "$name"`
-    declare -a channel_list
+    declare -a channel_list=()
     thud_arr_parse channel_list <<<"${params[channel_list]}"
     if [ "${#channel_list[@]}" == 0 ]; then
         carton_branch_set_channel_list "$branch_str" ""
@@ -783,22 +783,22 @@ declare -r CMD_DESC_TEXT="
 "
 
 declare ARG_MAP_STR
-declare -A ARG_MAP
+declare -A ARG_MAP=()
 ARG_MAP_STR=`desc_parse desc_arg_parse <<<"$ARG_DESC_TEXT"`
 thud_arr_parse ARG_MAP <<<"$ARG_MAP_STR"
 
 declare OPT_MAP_STR
-declare -A OPT_MAP
+declare -A OPT_MAP=()
 OPT_MAP_STR=`desc_parse desc_opt_parse <<<"$OPT_DESC_TEXT"`
 thud_arr_parse OPT_MAP <<<"$OPT_MAP_STR"
 
 declare CMD_MAP_STR
-declare -A CMD_MAP
+declare -A CMD_MAP=()
 CMD_MAP_STR=`desc_parse desc_cmd_parse <<<"$CMD_DESC_TEXT"`
 thud_arr_parse CMD_MAP <<<"$CMD_MAP_STR"
 declare -a CMD_LIST=()
 declare name
-declare -A desc
+declare -A desc=()
 for name in "${!CMD_MAP[@]}"; do
     thud_arr_parse desc <<<"${CMD_MAP[$name]}"
     CMD_LIST[${desc[index]}]="$name"
@@ -818,7 +818,7 @@ function usage()
 {
     declare name
     declare width
-    declare -A desc
+    declare -A desc=()
     declare line
 
     thud_unindent <<<"\
@@ -854,10 +854,10 @@ function usage_cmd()
 {
     declare -r name="$1"
     thud_assert '[ -n "${CMD_MAP[$name]+set}" ]'
-    declare -A desc
-    declare -a opt_list
+    declare -A desc=()
+    declare -a opt_list=()
     declare -A opt_head_map=()
-    declare -a arg_spec_list
+    declare -a arg_spec_list=()
     declare -a arg_list=()
     declare help_head="-h, --help"
     declare help_summary="Output command options and arguments and exit."
@@ -873,7 +873,7 @@ function usage_cmd()
     width="${#help_head}"
     if [ "${#opt_list[@]}" != 0 ]; then
         declare opt
-        declare -A opt_desc
+        declare -A opt_desc=()
         declare opt_head
         for opt in "${opt_list[@]}"; do
             thud_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
@@ -902,7 +902,7 @@ function usage_cmd()
                 bracket_depth=$((bracket_depth + 1))
                 echo -n " ["
             else
-                declare -A arg_desc
+                declare -A arg_desc=()
                 thud_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
                 thud_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
                 width=$((${#arg_desc[name]} > width
@@ -939,7 +939,7 @@ function usage_cmd()
     printf "    %-${width}s%s\\n" "$help_head" "$help_summary"
     if [ "${#opt_list[@]}" != 0 ]; then
         declare opt
-        declare -A opt_desc
+        declare -A opt_desc=()
         declare opt_head
         for opt in "${opt_list[@]}"; do
             thud_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
@@ -959,7 +959,7 @@ function usage_cmd()
         echo "Arguments:"
         for arg_spec in "${arg_spec_list[@]}"; do
             if [[ "$arg_spec" != [*?] ]]; then
-                declare -A arg_desc
+                declare -A arg_desc=()
                 declare arg_name
                 thud_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
                 thud_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
@@ -979,9 +979,9 @@ function usage_cmd()
 function cmd()
 {
     declare -r name="$1";   shift
-    declare -A desc
-    declare -a opt_list
-    declare -a arg_spec_list
+    declare -A desc=()
+    declare -a opt_list=()
+    declare -a arg_spec_list=()
     declare getopt_options="h"
     declare getopt_longoptions="help"
     declare args_expr
@@ -1000,7 +1000,7 @@ function cmd()
     # Build getopt short and long option list
     if [ "${#opt_list[@]}" != 0 ]; then
         declare opt
-        declare -A opt_desc
+        declare -A opt_desc=()
         declare opt_head
         for opt in "${opt_list[@]}"; do
             thud_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
@@ -1028,7 +1028,7 @@ function cmd()
             *)
                 thud_assert "[ "${#opt_list[@]}" != 0 ]"
                 declare opt
-                declare -A opt_desc
+                declare -A opt_desc=()
                 declare opt_head
                 for opt in "${opt_list[@]}"; do
                     thud_assert '[ -n "${OPT_MAP[$opt]+set}" ]'
@@ -1082,7 +1082,7 @@ function cmd()
                             fi
                             # Process argument
                             arg_spec="${arg_spec_list[j]}"
-                            declare -A arg_desc
+                            declare -A arg_desc=()
                             thud_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
                             thud_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
                             thud_arr_parse list <<<"${params[${arg_spec}_list]}" 
@@ -1106,7 +1106,7 @@ function cmd()
                         fi
                     fi
                     # Process argument
-                    declare -A arg_desc
+                    declare -A arg_desc=()
                     thud_assert '[ -n "${ARG_MAP[$arg_spec]+set}" ]'
                     thud_arr_parse arg_desc <<<"${ARG_MAP[$arg_spec]}"
                     params[$arg_spec]=`

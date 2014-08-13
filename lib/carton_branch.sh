@@ -86,7 +86,7 @@ function _carton_branch_config_get()
 {
     declare -r branch_str="$1";    shift
     declare -r name="$1";           shift
-    declare -A branch
+    declare -A branch=()
     thud_arr_parse branch <<<"$branch_str"
     GIT_DIR="${branch[git_dir]}" \
         git config --get "branch.${branch[name]}.carton-$name"
@@ -99,7 +99,7 @@ function _carton_branch_config_set()
     declare -r branch_str="$1";    shift
     declare -r name="$1";           shift
     declare -r value="$1";          shift
-    declare -A branch
+    declare -A branch=()
     thud_arr_parse branch <<<"$branch_str"
     GIT_DIR="${branch[git_dir]}" \
         git config "branch.${branch[name]}.carton-$name" "$value"

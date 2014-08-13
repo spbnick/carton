@@ -66,9 +66,9 @@ function carton_repo_load()
 declare -r _CARTON_REPO_GET_REPO_AND_REV='
     declare -r repo_str="$1"; shift
     declare -r rev_str="$1"; shift
-    declare -A repo
+    declare -A repo=()
     thud_arr_parse "repo" <<<"$repo_str"
-    declare -A rev
+    declare -A rev=()
     thud_arr_parse "rev" <<<"$rev_str"
 '
 
@@ -96,7 +96,7 @@ function _carton_repo_update()
     declare -r command="$1";    shift
     declare -r repo_str="$1";   shift
     declare -r rev_str="$1";    shift
-    declare -A repo
+    declare -A repo=()
     declare status
     thud_arr_parse repo <<<"$repo_str"
 

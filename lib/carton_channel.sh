@@ -49,7 +49,7 @@ declare -r _CARTON_CHANNEL_GET_WITH_REV_STR='
 function carton_channel_is_applicable()
 {
     eval "$_CARTON_CHANNEL_GET_WITH_REV_STR"
-    declare -A rev
+    declare -A rev=()
     thud_arr_parse rev <<<"$rev_str"
     [[ "$channel_ver_regex" == "" ||
        "${rev[num]}" == 0 && "${rev[ver]}" =~ $channel_ver_regex ]]
