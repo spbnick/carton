@@ -364,7 +364,7 @@ function carton_project_get_branch()
     carton_branch_load "${project[git_dir]}" "$branch_name"
 }
 
-# Publish new revisions for a project commit.
+# Publish new revisions for a project commit to a channel list.
 # Args: project_str channel_list committish
 function _carton_project_update_commit()
 {
@@ -542,7 +542,7 @@ function carton_project_update()
 }
 
 # Skip a project's branch new commits, without publishing.
-# Args: project_str
+# Args: project_str branch_name
 function carton_project_skip_branch()
 {
     eval "$_CARTON_PROJECT_GET_BRANCH_LOC"
