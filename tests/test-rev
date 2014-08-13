@@ -83,7 +83,7 @@ function test_commit()
                 rev_str=`carton_rev_init "$REV_DIR" \
                                          "$dist_ver" "$rev_num" "$hash" \
                                          "$DIST_DIR"`
-                declare -A rev
+                declare -A rev=()
                 thud_arr_parse rev <<<"$rev_str"
 
                 ep_test is_built [ "${rev[is_built]}" == "$is_built" ]
@@ -116,7 +116,7 @@ function test_commit()
                 declare rev_str
                 rev_str=`carton_rev_load "$REV_DIR" "$dist_ver" "$rev_num" \
                                             "$hash"`
-                declare -A rev
+                declare -A rev=()
                 thud_arr_parse rev <<<"$rev_str"
                 ep_test is_built [ "${rev[is_built]}" == "$is_built" ]
                 if $is_built; then

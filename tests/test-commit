@@ -35,7 +35,7 @@ declare -r COMMIT_DIR="$DATA_DIR/commit"
 function test_rev()
 {
     declare -r commit_str="$1"; shift
-    declare -A commit
+    declare -A commit=()
     thud_arr_parse commit <<<"$commit_str"
 
     ep_suite_begin rev; (
@@ -120,7 +120,7 @@ function test_commit()
                         GIT_DIR="$GIT_DIR" git archive --format=tar \
                                                        "$committish"
                     )`
-                declare -A commit
+                declare -A commit=()
                 thud_arr_parse commit <<<"$commit_str"
                 ep_test is_built [ "${commit[is_built]}" == "$is_built" ]
                 if $is_built; then
@@ -148,7 +148,7 @@ function test_commit()
                 ep_suite_init
                 declare commit_str
                 commit_str=`carton_commit_load 0123abc "$COMMIT_DIR"`
-                declare -A commit
+                declare -A commit=()
                 thud_arr_parse commit <<<"$commit_str"
                 ep_test is_built [ "${commit[is_built]}" == "$is_built" ]
                 if $is_built; then

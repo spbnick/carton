@@ -70,7 +70,7 @@ ep_suite_begin init; (
         ep_teardown_push rm -Rf "$REPO_DIR"
         declare repo_str
         repo_str=`carton_repo_init "$REPO_DIR"`
-        declare -A repo
+        declare -A repo=()
         thud_arr_parse repo <<<"$repo_str"
         ep_test dir_exists test -d "${repo[dir]}"
     ); ep_suite_end
@@ -91,7 +91,7 @@ ep_suite_begin load; (
         ep_suite_init
         declare repo_str
         repo_str=`carton_repo_load "$REPO_DIR"`
-        declare -A repo
+        declare -A repo=()
         thud_arr_parse repo <<<"$repo_str"
         ep_test dir_exists test -d "${repo[dir]}"
     ); ep_suite_end
@@ -118,7 +118,7 @@ ep_suite_begin publish; (
         ep_teardown_push rm -Rf "$REPO_DIR"
         declare repo_str
         repo_str=`carton_repo_init "$REPO_DIR"`
-        declare -A repo
+        declare -A repo=()
         thud_arr_parse repo <<<"$repo_str"
         carton_repo_publish "$repo_str" "$rev_str"
         ep_test rpm test -f "${repo[rpm_link]}/carton-test-2-1.1.1.0123abc."*noarch.rpm
@@ -148,7 +148,7 @@ ep_suite_begin withdraw; (
         ep_teardown_push rm -Rf "$REPO_DIR"
         declare repo_str
         repo_str=`carton_repo_init "$REPO_DIR"`
-        declare -A repo
+        declare -A repo=()
         thud_arr_parse repo <<<"$repo_str"
         carton_repo_publish "$repo_str" "$rev_str"
         carton_repo_withdraw "$repo_str" "$rev_str"

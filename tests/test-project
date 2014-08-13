@@ -75,7 +75,7 @@ ep_suite_begin init; (
                 project_str=`eval "carton_project_init \
                                     \"\$PROJECT_DIR\" \"\$GIT_DIR\" \
                                     $args"`
-                declare -A project
+                declare -A project=()
                 thud_arr_parse project <<<"$project_str"
                 cd "${project[git_dir]}"
                 ep_test tag_glob \
@@ -115,7 +115,7 @@ ep_suite_begin load; (
                             >/dev/null
         declare project_str
         project_str=`carton_project_load "$PROJECT_DIR"`
-        declare -A project
+        declare -A project=()
         thud_arr_parse project <<<"$project_str"
         cd "${project[git_dir]}"
         ep_test tag_glob \
@@ -147,7 +147,7 @@ ep_suite_begin fetch; (
         declare project_str
         project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
         carton_project_fetch "$project_str"
-        declare -A project
+        declare -A project=()
         thud_arr_parse project <<<"$project_str"
         GIT_DIR="${project[git_dir]}" \
             ep_test origin_master_exists \
@@ -178,7 +178,7 @@ ep_suite_begin commit; (
             carton_project_fetch "$project_str"
             declare commit_str
             commit_str=`carton_project_add_commit "$project_str" v1`
-            declare -A commit
+            declare -A commit=()
             thud_arr_parse commit <<<"$commit_str"
             ep_test dir_exists [ -d "${commit[dir]}" ]
         ); ep_suite_end
@@ -206,7 +206,7 @@ ep_suite_begin commit; (
             carton_project_add_commit "$project_str" v1 >/dev/null
             declare commit_str
             commit_str=`carton_project_get_commit "$project_str" v1`
-            declare -A commit
+            declare -A commit=()
             thud_arr_parse commit <<<"$commit_str"
             ep_test exists [ -d "${commit[dir]}" ]
         ); ep_suite_end
@@ -233,7 +233,7 @@ ep_suite_begin commit; (
             carton_project_fetch "$project_str"
             declare commit_str
             commit_str=`carton_project_add_commit "$project_str" v1`
-            declare -A commit
+            declare -A commit=()
             thud_arr_parse commit <<<"$commit_str"
             carton_project_del_commit "$project_str" v1
             ep_test not_exists eval "! [ -d "${commit[dir]}" ]"
@@ -324,7 +324,7 @@ ep_suite_begin branch; (
             carton_project_fetch "$project_str"
             declare branch_str
             branch_str=`carton_project_add_branch "$project_str" master`
-            declare -A branch
+            declare -A branch=()
             thud_arr_parse branch <<<"$branch_str"
             GIT_DIR="${branch[git_dir]}" \
                 ep_test exists \
@@ -354,7 +354,7 @@ ep_suite_begin branch; (
             carton_project_add_branch "$project_str" master >/dev/null
             declare branch_str
             branch_str=`carton_project_get_branch "$project_str" master`
-            declare -A branch
+            declare -A branch=()
             thud_arr_parse branch <<<"$branch_str"
             GIT_DIR="${branch[git_dir]}" \
                 ep_test exists \
@@ -383,7 +383,7 @@ ep_suite_begin branch; (
             carton_project_fetch "$project_str"
             declare branch_str
             branch_str=`carton_project_add_branch "$project_str" master`
-            declare -A branch
+            declare -A branch=()
             thud_arr_parse branch <<<"$branch_str"
             carton_project_del_branch "$project_str" master
             GIT_DIR="${branch[git_dir]}" \

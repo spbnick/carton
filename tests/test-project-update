@@ -52,7 +52,7 @@ ep_suite_begin old_new \
         ep_teardown_push rm -Rf "$PROJECT_DIR"
         declare project_str
         project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
-        declare -A project
+        declare -A project=()
         thud_arr_parse project <<<"$project_str"
 
         carton_project_fetch "$project_str"
@@ -128,7 +128,7 @@ ep_suite_begin published \
         ep_teardown_push rm -Rf "$PROJECT_DIR"
         declare project_str
         project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
-        declare -A project
+        declare -A project=()
         thud_arr_parse project <<<"$project_str"
 
         carton_project_fetch "$project_str"
@@ -165,7 +165,7 @@ ep_suite_begin published \
 
         declare commit_str
         commit_str=`carton_project_get_commit "$project_str" add_spec`
-        declare -A commit
+        declare -A commit=()
         thud_arr_parse commit <<<"$commit_str"
         ep_test built "${commit[is_built]}"
 
@@ -183,7 +183,7 @@ ep_suite_begin published \
 
             declare rev_str
             rev_str=`carton_commit_get_rev "$commit_str" "$rev_num"`
-            declare -A rev
+            declare -A rev=()
             thud_arr_parse rev <<<"$rev_str"
 
             ep_test built "${rev[is_built]}"
@@ -209,7 +209,7 @@ ep_suite_begin max_age \
         ep_teardown_push rm -Rf "$PROJECT_DIR"
         declare project_str
         project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
-        declare -A project
+        declare -A project=()
         thud_arr_parse project <<<"$project_str"
 
         carton_project_fetch "$project_str"
@@ -261,7 +261,7 @@ ep_suite_begin branches \
         ep_teardown_push rm -Rf "$PROJECT_DIR"
         declare project_str
         project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
-        declare -A project
+        declare -A project=()
         thud_arr_parse project <<<"$project_str"
 
         carton_project_fetch "$project_str"
@@ -310,7 +310,7 @@ ep_suite_begin new_tags \
         ep_teardown_push rm -Rf "$PROJECT_DIR"
         declare project_str
         project_str=`carton_project_init "$PROJECT_DIR" "$GIT_DIR"`
-        declare -A project
+        declare -A project=()
         thud_arr_parse project <<<"$project_str"
 
         carton_project_fetch "$project_str"
