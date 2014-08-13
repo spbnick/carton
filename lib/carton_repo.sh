@@ -32,6 +32,7 @@ declare -r _CARTON_REPO_LOAD_BASE='
 
     declare -A repo=(
         [dir]="$dir"
+        [hooks]="$dir/hooks"
         [rpm_link]="$dir/rpm"
         [rpm_old]="$dir/rpm.old"
         [rpm_cur]="$dir/rpm.cur"
@@ -139,6 +140,9 @@ function _carton_repo_update()
         date --rfc-2822
         exit "$status"
     ) >| "${repo[rpm_log]}" 2>&1
+    if [ -x "${repo[hooks]}/post-update" ]; then
+        "${repo[hooks]}/post-update" </dev/null >/dev/null
+    fi
 }
 
 # Add revision packages to a repo directory.
