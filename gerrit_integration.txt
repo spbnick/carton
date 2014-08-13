@@ -1,0 +1,29 @@
+Revision number could be anything, even older than the currently published
+change, even if it was newer, it can become older while the change is being
+reviewed. So, cannot rely on a reviewed change commit superseding published
+commit with the same versioning scheme. Even if they're in different repos,
+it's not easy to set priorities. And the reviewed package changes might need
+dependencies, which might need picking.
+
+Thus, it might be necessary to somehow ensure that reviewed packages will
+supersede published packages. What about superseding one another? There is no
+data which would allow to determine which should supersede which. Only in
+people's head and even that might require careful consideration. So, no need
+to care about changes properly superseeding one another.
+
+What about using epoch? This could work.
+
+available differentiators:
+repo
+EVR
+package name - not really available because other packages depend on the name
+
+all changes in a single repo
+    - needs version specification to select specific change
+
+all changes in a single per-branch repo
+    - needs version specification to select specific change
+
+each change in its own repo beside/under the branch repo
+    - doesn't need version specification to select specific change, only patchset
+    - needs repo url change for every change switch
