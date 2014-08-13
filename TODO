@@ -28,3 +28,6 @@ Rename rpmbuild macro "rev" to "carton_dot_rev" and add "carton_rev" macro,
 one without a dot at the start, to be used with packages not interested in
 RPM-specific numbers yet. The package can switch from "carton_rev" to
 "carton_dot_rev" later.
+
+Do channel list publishing and withdrawing via repo list, move repo hooks to
+repo list.
