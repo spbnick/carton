@@ -141,7 +141,10 @@ function _carton_repo_update()
         exit "$status"
     ) >| "${repo[rpm_log]}" 2>&1
     if [ -x "${repo[hooks]}/post-update" ]; then
-        "${repo[hooks]}/post-update" </dev/null >/dev/null
+        (
+            cd "${repo[dir]}"
+            "${repo[hooks]}/post-update" </dev/null >/dev/null || true
+        )
     fi
 }
 
